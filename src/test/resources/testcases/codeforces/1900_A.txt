@@ -1,0 +1,37 @@
+# Codeforces 1900A - Don't Try to Count
+# Format: INPUT / OUTPUT blocks, separated by ---
+# Paste directly from Codeforces problem examples
+
+INPUT
+7
+a
+aaaaa
+a
+a
+a
+b
+abc
+abcabc
+abc
+cabcabc
+x
+x
+aba
+ab
+OUTPUT
+4
+0
+-1
+2
+1
+0
+-1
+---
+
+# Custom edge case: single character
+INPUT
+1
+z
+zzz
+OUTPUT
+2
