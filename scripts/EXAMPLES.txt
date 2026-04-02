@@ -1,0 +1,16 @@
+# Example commands for new-problem.ps1
+
+# 1. LeetCode - Full example with all parameters
+.\scripts\new-problem.ps1 -Id 3 -Title "Longest Substring Without Repeating Characters" -Platform leetcode -Difficulty medium -Tags "String,HashTable,SlidingWindow" -Url "https://leetcode.com/problems/longest-substring-without-repeating-characters/"
+
+# 2. Codeforces - Typical problem
+.\scripts\new-problem.ps1 -Id "1234B" -Title "Interesting Subarray" -Platform codeforces -Difficulty medium -Tags "Math,DP" -Url "https://codeforces.com/contest/1234/problem/B"
+
+# 3. AtCoder - Simple
+.\scripts\new-problem.ps1 -Id "abc123_d" -Title "Cooking" -Platform atcoder -Difficulty medium
+
+# 4. Preview mode (no files created)
+.\scripts\new-problem.ps1 -Id 999 -Title "Test Problem" -Platform leetcode -DryRun
+
+# 5. Minimal required parameters only
+.\scripts\new-problem.ps1 -Id 100 -Title "Same Tree" -Platform leetcode

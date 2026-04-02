@@ -25,6 +25,31 @@ mvn test
 mvn test -Dtest=P001_TwoSumTest
 ```
 
+## Creating New Problems
+
+Use the `new-problem.ps1` script to auto-generate problem files with proper structure:
+
+```powershell
+# LeetCode problem
+.\scripts\new-problem.ps1 -Id 1 -Title "Two Sum" -Platform leetcode -Difficulty easy -Tags "Array,HashTable" -Url "https://leetcode.com/problems/two-sum/"
+
+# Codeforces problem
+.\scripts\new-problem.ps1 -Id "4A" -Title "Watermelon" -Platform codeforces -Difficulty easy -Tags "Math,Greedy"
+
+# Preview without creating files (dry run)
+.\scripts\new-problem.ps1 -Id 42 -Title "Test" -Platform leetcode -DryRun
+
+# Get help
+Get-Help .\scripts\new-problem.ps1 -Detailed
+```
+
+**What it creates:**
+- Solution file: `src/main/java/com/cp/problems/{platform}/P{id}_{Title}.java`
+- Test file: `src/test/java/com/cp/problems/{platform}/P{id}_{Title}Test.java`
+- Test case template: `src/test/resources/testcases/{platform}/{id}_{title}.txt`
+
+All files include proper `@Problem` annotations and boilerplate code.
+
 ## Project Structure
 
 ```
