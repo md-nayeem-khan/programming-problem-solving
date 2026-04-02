@@ -46,12 +46,13 @@ public class InputParser {
     }
 
     // ---------------------------------------------------------------
-    // int[] from "[1,2,3,4,5]"
+    // int[] from "[1,2,3,4,5]" or "[1, 2, 3]" or "[1,-2,3]"
     // ---------------------------------------------------------------
     public static int[] parseIntArray(String s) {
         s = s.trim();
         if (s.equals("[]")) return new int[0];
         s = s.substring(1, s.length() - 1); // strip [ ]
+        if (s.isEmpty()) return new int[0];
         String[] tokens = s.split(",");
         int[] result = new int[tokens.length];
         for (int i = 0; i < tokens.length; i++) result[i] = Integer.parseInt(tokens[i].trim());

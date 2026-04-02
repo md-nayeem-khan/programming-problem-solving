@@ -1,0 +1,65 @@
+# Codeforces 4A - Watermelon
+# Problem: Can you divide watermelon of weight w into two even positive parts?
+# Format: INPUT / OUTPUT blocks, separated by ---
+
+# Example from problem statement
+INPUT
+8
+OUTPUT
+YES
+---
+
+# Edge case: w = 1 (cannot split into two positive parts)
+INPUT
+1
+OUTPUT
+NO
+---
+
+# Edge case: w = 2 (only split is 1+1, both odd)
+INPUT
+2
+OUTPUT
+NO
+---
+
+# Edge case: w = 3 (odd, impossible)
+INPUT
+3
+OUTPUT
+NO
+---
+
+# Smallest valid case: w = 4 (split into 2+2)
+INPUT
+4
+OUTPUT
+YES
+---
+
+# Odd number
+INPUT
+5
+OUTPUT
+NO
+---
+
+# Even number > 4
+INPUT
+6
+OUTPUT
+YES
+---
+
+# Larger even number
+INPUT
+100
+OUTPUT
+YES
+---
+
+# Larger odd number
+INPUT
+99
+OUTPUT
+NO

@@ -1,227 +1,189 @@
-# CP Practice — Competitive Programming in Java (Maven + IntelliJ)
+# Programming Problem Solving
 
-A structured Maven project for LeetCode and Codeforces practice with reusable
-data structures, algorithm templates, and an automatic test case loading system.
+A comprehensive Java toolkit for competitive programming and technical interview preparation. Built with reusable data structures, algorithm templates, and an automatic test case system.
 
----
+**Target:** Crack Big Tech coding interviews (FAANG/MAANG) with 5+ years of experience.
+
+## Prerequisites
+
+- Java 17+
+- Maven 3.8+
+- IntelliJ IDEA (recommended)
+
+## Quick Start
+
+```bash
+# Clone and build
+git clone <repository-url>
+cd programming-problem-solving
+mvn clean install
+
+# Run all tests
+mvn test
+
+# Run specific test
+mvn test -Dtest=P001_TwoSumTest
+```
 
 ## Project Structure
 
 ```
-cp-practice/
-├── pom.xml
-└── src/
-    ├── main/java/com/cp/
-    │   ├── datastructures/
-    │   │   ├── TreeNode.java          ← LeetCode binary tree (fromArray, serialize, print)
-    │   │   ├── ListNode.java          ← LeetCode linked list
-    │   │   ├── GraphNode.java         ← Clone-graph node + adjacency list + matrix
-    │   │   ├── TrieNode.java          ← Trie with insert/search/delete
-    │   │   ├── DSU.java               ← Union-Find with rank + weighted variant
-    │   │   └── SegmentTree.java       ← Segment Tree + Binary Indexed Tree (Fenwick)
-    │   ├── algorithms/
-    │   │   ├── BFSDFSTemplates.java   ← Graph/Grid/Tree BFS+DFS, cycle detection
-    │   │   ├── GraphAlgorithms.java   ← Dijkstra, Bellman-Ford, Floyd, Topo, MST
-    │   │   ├── StringAlgorithms.java  ← KMP, Z-function, Rabin-Karp, Manacher
-    │   │   ├── SearchTemplates.java   ← Binary search variants, Two Pointers, Sliding Window, Prefix Sum
-    │   │   └── DPAndMathTemplates.java← LCS, LIS, Knapsack, Coin Change, GCD, Sieve, Bit tricks
-    │   └── problems/
-    │       ├── Problem.java           ← @Problem annotation (id, title, tags, difficulty)
-    │       ├── BaseSolution.java      ← Base class (debug helper, CF solve() hook)
-    │       ├── leetcode/
-    │       │   ├── P000_Template.java ← Copy this for every new LeetCode problem
-    │       │   └── P001_TwoSum.java   ← Example solution
-    │       └── codeforces/
-    │           ├── CF_000_X.java      ← Copy this for every new Codeforces problem
-    │           └── CF_1900_A.java     ← Example solution
-    └── test/
-        ├── java/com/cp/
-        │   ├── TemplateTests.java     ← Unit tests for all DS + algo templates
-        │   └── problems/
-        │       ├── leetcode/
-        │       │   ├── P000_TemplateTest.java  ← Copy for new tests
-        │       │   └── P001_TwoSumTest.java
-        │       └── codeforces/
-        │           └── CF_1900_A_Test.java
-        └── resources/testcases/
-            ├── leetcode/
-            │   └── 001_two_sum.txt    ← key=value INPUT/OUTPUT blocks
-            └── codeforces/
-                └── 1900_A.txt         ← raw stdin/stdout blocks
+src/
+├── main/java/com/cp/
+│   ├── algorithms/           # 45+ algorithm templates
+│   ├── datastructures/       # Core data structures
+│   ├── problems/             # LeetCode & Codeforces solutions
+│   │   ├── leetcode/
+│   │   └── codeforces/
+│   └── testcases/            # Auto test case loading system
+└── test/
+    ├── java/com/cp/          # Unit tests
+    └── resources/testcases/  # Test case files
 ```
 
+## Data Structures
+
+| Structure | File | Description |
+|-----------|------|-------------|
+| Binary Tree | `TreeNode.java` | LeetCode-style with fromArray, serialize, print |
+| Linked List | `ListNode.java` | Singly linked list node |
+| Graph | `GraphNode.java` | Adjacency list + matrix representations |
+| Trie | `TrieNode.java` | Insert, search, delete, prefix operations |
+| Union-Find | `DSU.java` | With rank compression + weighted variant |
+| Segment Tree | `SegmentTree.java` | Range queries + Fenwick Tree |
+
+## Algorithm Templates
+
+### Foundation (Interview Essentials)
+
+| Template | Key Algorithms |
+|----------|----------------|
+| `SearchTemplates` | Binary search, two pointers, sliding window |
+| `BFSDFSTemplates` | Graph/grid/tree traversal, cycle detection |
+| `GraphAlgorithms` | Dijkstra, Bellman-Ford, Floyd-Warshall, Topological Sort, MST |
+| `DPAndMathTemplates` | LCS, LIS, knapsack, matrix exponentiation |
+| `BacktrackingTemplates` | Permutations, combinations, N-Queens, Sudoku |
+| `StringAlgorithms` | KMP, Z-function, Rabin-Karp, Manacher |
+| `HeapTemplates` | Top K, median finder, K-way merge |
+| `TreeTemplates` | LCA, diameter, path sum, binary lifting |
+| `SortingTemplates` | Quick sort/select, counting/radix sort |
+| `GreedyTemplates` | Jump game, gas station, activity selection |
+
+### Advanced (Senior Level)
+
+| Template | Key Algorithms |
+|----------|----------------|
+| `NetworkFlowTemplates` | Ford-Fulkerson, Dinic's, Hungarian |
+| `BitmaskDPTemplates` | TSP, Hamiltonian path, subset DP |
+| `AdvancedGraphTemplates` | Tarjan SCC, bridges, articulation points, Eulerian |
+| `DigitDPTemplates` | Digit constraint problems |
+| `GameTheoryTemplates` | Nim, Sprague-Grundy theorem |
+| `FFTTemplates` | Fast polynomial multiplication |
+
+### Expert (Competitive Programming)
+
+| Template | Key Algorithms |
+|----------|----------------|
+| `LazySegmentTreeTemplates` | Range updates with lazy propagation |
+| `SuffixArrayTemplates` | Suffix array, LCP array |
+| `AhoCorasickTemplates` | Multi-pattern string matching |
+| `HeavyLightDecomposition` | Tree path queries O(log²n) |
+| `CentroidDecompositionTemplates` | Tree divide and conquer |
+| `MoAlgorithmTemplates` | Offline range queries O(n√n) |
+| `PersistentDataStructures` | Time-travel/versioned queries |
+| `ConvexHullOptimization` | DP optimization techniques |
+
+## Test Case System
+
+Auto-load test cases from files:
+
+```
+src/test/resources/testcases/
+├── leetcode/
+│   └── 001_two_sum.txt      # key=value format
+└── codeforces/
+    └── 1900_A.txt           # stdin/stdout format
+```
+
+**LeetCode format:**
+```
+INPUT=nums=[2,7,11,15], target=9
+OUTPUT=[0,1]
+```
+
+**Codeforces format:**
+```
+5
+1 2 3 4 5
 ---
-
-## Workflow: Adding a New LeetCode Problem
-
-### Step 1 — Create the solution file
-Copy `P000_Template.java`, rename to `P{id}_{Title}.java`, fill in `@Problem`.
-
-```java
-@Problem(id="200", title="Number of Islands", difficulty=Difficulty.MEDIUM, tags={"BFS","Grid"})
-public class P200_NumberOfIslands extends BaseSolution {
-    public int numIslands(char[][] grid) {
-        // your solution
-    }
-}
+15
 ```
 
-### Step 2 — Create the test case file
-Create `src/test/resources/testcases/leetcode/200_number_of_islands.txt`:
+## Creating a New Solution
 
-```
-INPUT
-grid = [["1","1","1","1","0"],["1","1","0","1","0"],["1","1","0","0","0"],["0","0","0","0","0"]]
-OUTPUT
-1
+### LeetCode
 
-INPUT
-grid = [["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]
-OUTPUT
-3
-```
+1. Copy `P000_Template.java` to `P{number}_{Name}.java`
+2. Copy `P000_TemplateTest.java` for tests
+3. Add test cases to `resources/testcases/leetcode/`
 
-### Step 3 — Create the test class
-Copy `P000_TemplateTest.java`, rename, parse your params:
+### Codeforces
 
-```java
-@ParameterizedTest @MethodSource("caseIndices")
-void test(int i) {
-    TestCase tc = CASES.get(i);
-    char[][] grid = InputParser.parseCharGrid(tc.getParam("grid"));
-    int expected  = InputParser.parseInt(tc.output);
-    assertEquals(expected, solution.numIslands(grid));
-}
-```
+1. Copy `CF_000_X.java` to `CF_{contest}_{problem}.java`
+2. Extend `BaseSolution` and implement `solve()`
+3. Add test cases to `resources/testcases/codeforces/`
 
----
+## Complexity Reference
 
-## Workflow: Adding a New Codeforces Problem
+| Category | Algorithm | Time | Space |
+|----------|-----------|------|-------|
+| **Search** | Binary Search | O(log n) | O(1) |
+| | Two Pointers | O(n) | O(1) |
+| **Graph** | BFS/DFS | O(V + E) | O(V) |
+| | Dijkstra | O((V+E) log V) | O(V) |
+| | Floyd-Warshall | O(V³) | O(V²) |
+| **String** | KMP | O(n + m) | O(m) |
+| | Manacher | O(n) | O(n) |
+| **DP** | LIS (optimal) | O(n log n) | O(n) |
+| | Knapsack | O(n × W) | O(W) |
+| **Tree** | LCA (Binary Lifting) | O(log n) | O(n log n) |
+| | Segment Tree Query | O(log n) | O(n) |
 
-### Step 1 — Create the solution file
-Copy `CF_000_X.java`, rename to `CF_{contestId}_{letter}.java`.
+## Common Patterns
 
-### Step 2 — Create the test case file
-Create `src/test/resources/testcases/codeforces/1900_B.txt`:
-
-```
-INPUT
-3
-abc
-abc
-OUTPUT
-0 1 2
----
-INPUT
-2
-ab
-ba
-OUTPUT
-1 0
-```
-
-### Step 3 — Create the test class
-```java
-@Test void testAllCases() {
-    SolutionRunner.runAndAssert(new CF_1900_B(), "codeforces/1900_B.txt");
-}
-```
-
----
-
-## InputParser Reference
-
-| Method | Input string | Java type |
-|---|---|---|
-| `parseInt(s)` | `"42"` | `int` |
-| `parseIntArray(s)` | `"[1,2,3]"` | `int[]` |
-| `parseInt2DArray(s)` | `"[[1,2],[3,4]]"` | `int[][]` |
-| `parseString(s)` | `"\"hello\""` | `String` |
-| `parseStringArray(s)` | `"[\"a\",\"b\"]"` | `String[]` |
-| `parseBoolean(s)` | `"true"` | `boolean` |
-| `parseTreeNode(s)` | `"[1,2,3,null,5]"` | `TreeNode` |
-| `parseListNode(s)` | `"[1,2,3]"` | `ListNode` |
-| `parseIntList(s)` | `"[1,2,3]"` | `List<Integer>` |
-| `parseCharGrid(s)` | `"[\"#.\",\".#\"]"` | `char[][]` |
-
----
-
-## Algorithm Templates Quick Reference
-
-### BFS / DFS
-```java
-// Graph BFS (shortest distance)
-int[] dist = BFSDFSTemplates.graphBFS(adj, src, n);
-
-// Grid BFS (min steps in 2D grid)
-int steps = BFSDFSTemplates.gridBFS(grid, sr, sc, er, ec);
-
-// Level-order tree traversal
-List<List<Integer>> levels = BFSDFSTemplates.levelOrder(root);
-
-// Tree iterative DFS
-List<Integer> inorder = BFSDFSTemplates.inOrder(root);
-```
-
-### Graph Shortest Path
-```java
-int[] dist = GraphAlgorithms.dijkstra(adj, src, n);          // non-negative weights
-int[] dist = GraphAlgorithms.bellmanFord(n, edges, src);     // negative weights
-int[][] dist = GraphAlgorithms.floydWarshall(distMatrix);    // all-pairs
-```
-
-### String Matching
-```java
-List<Integer> pos = StringAlgorithms.KMP.search(text, pattern);
-List<Integer> pos = StringAlgorithms.zSearch(text, pattern);
-String pal = StringAlgorithms.longestPalindrome(s);          // Manacher O(n)
-```
-
-### Binary Search
-```java
-int idx = SearchTemplates.binarySearch(nums, target);
-int lb  = SearchTemplates.lowerBound(nums, target);    // first >= target
-int ub  = SearchTemplates.upperBound(nums, target);    // first > target
-// Binary search on answer:
-int ans = SearchTemplates.binarySearchOnAnswer(lo, hi, k -> isFeasible(k));
-```
-
-### Dynamic Programming
-```java
-int len  = DPAndMathTemplates.lcs(a, b);
-int len  = DPAndMathTemplates.lis(nums);
-int val  = DPAndMathTemplates.knapsack(weights, values, capacity);
-int min  = DPAndMathTemplates.coinChange(coins, amount);
-int dist = DPAndMathTemplates.editDistance(a, b);
-```
-
-### Math
-```java
-long g = DPAndMathTemplates.gcd(a, b);
-long p = DPAndMathTemplates.modPow(base, exp, mod);
-boolean[] primes = DPAndMathTemplates.sieve(n);
-```
-
----
+1. **Two Pointers** — Sorted arrays, palindromes, container problems
+2. **Sliding Window** — Subarray/substring with constraints
+3. **Monotonic Stack** — Next greater element, histogram
+4. **Binary Search** — Search space reduction, answer binary search
+5. **BFS/DFS** — Traversal, shortest path, connectivity
+6. **Dynamic Programming** — Overlapping subproblems, optimal substructure
+7. **Backtracking** — Permutations, combinations, constraint satisfaction
+8. **Union-Find** — Dynamic connectivity, MST (Kruskal)
 
 ## Running Tests
 
 ```bash
-# Run all tests
+# All tests
 mvn test
 
-# Run a specific test class
+# Specific test class
 mvn test -Dtest=P001_TwoSumTest
 
-# Run all LeetCode tests
+# All LeetCode tests
 mvn test -Dtest="com.cp.problems.leetcode.*"
+
+# With coverage report
+mvn test jacoco:report
+# View: target/site/jacoco/index.html
 ```
 
----
+## IDE Setup (IntelliJ)
 
-## IntelliJ Tips
+1. **Import:** File → Open → Select `pom.xml` → Open as Project
+2. **Live Template:** Settings → Editor → Live Templates → Add `cp` template
+3. **Run Tests:** Right-click test file → Run
+4. **LeetCode Plugin:** Marketplace → Install "LeetCode Editor"
 
-- Right-click any `*Test.java` → **Run** to execute just that file.
-- Set a **Live Template** in IntelliJ for `cp` → expands to the full problem template.
-- Use **Bookmarks** (F11) to mark solutions you want to revisit.
-- Install the **LeetCode plugin** for IntelliJ to pull problem statements directly into the IDE.
+## License
+
+MIT

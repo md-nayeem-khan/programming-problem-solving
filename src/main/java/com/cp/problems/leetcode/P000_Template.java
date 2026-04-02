@@ -22,6 +22,9 @@ import com.cp.problems.Problem;
  * import com.cp.algorithms.SearchTemplates;
  * import com.cp.algorithms.StringAlgorithms;
  * import com.cp.algorithms.GraphAlgorithms;
+ * import com.cp.algorithms.BacktrackingTemplates;        // NEW! All backtracking patterns
+ * import com.cp.algorithms.AdvancedDataStructures;       // NEW! Monotonic stack/queue, LRU, intervals
+ * import com.cp.algorithms.DPAndMathTemplates;
  *
  * import java.util.*;
  */
@@ -38,7 +41,7 @@ public class P000_Template extends BaseSolution {
     // ── Paste your solution method(s) here ──────────────────────
 
     public int solve(int n) {
-        // TODO
-        return 0;
+        // Template example: multiply by 2
+        return n * 2;
     }
 }

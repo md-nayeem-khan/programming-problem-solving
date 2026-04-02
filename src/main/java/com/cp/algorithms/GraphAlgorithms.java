@@ -1,5 +1,7 @@
 package com.cp.algorithms;
 
+import com.cp.problems.Complexity;
+
 import java.util.*;
 
 /**
@@ -19,6 +21,7 @@ public class GraphAlgorithms {
     // 1. Dijkstra — O((V + E) log V) with priority queue
     //    adj[u] = list of {v, weight}
     // ---------------------------------------------------------------
+    @Complexity(time = "O((V + E) log V)", space = "O(V)", explanation = "Priority queue based")
     public static int[] dijkstra(List<int[]>[] adj, int src, int n) {
         int[] dist = new int[n];
         Arrays.fill(dist, INF);

@@ -55,20 +55,23 @@ public class TrieNode {
             return true;
         }
 
-        /** Delete a word from the trie */
+        /** Delete a word from the trie. Returns true if word existed and was deleted. */
         public boolean delete(String word) {
-            return deleteHelper(root, word, 0);
+            boolean[] deleted = {false};
+            deleteHelper(root, word, 0, deleted);
+            return deleted[0];
         }
 
-        private boolean deleteHelper(TrieNode node, String word, int depth) {
+        private boolean deleteHelper(TrieNode node, String word, int depth, boolean[] deleted) {
             if (node == null) return false;
             if (depth == word.length()) {
                 if (!node.isEnd) return false;
                 node.isEnd = false;
+                deleted[0] = true; // Mark as successfully deleted
                 return isEmpty(node);
             }
             int idx = word.charAt(depth) - 'a';
-            if (deleteHelper(node.children[idx], word, depth + 1)) {
+            if (deleteHelper(node.children[idx], word, depth + 1, deleted)) {
                 node.children[idx] = null;
                 return !node.isEnd && isEmpty(node);
             }

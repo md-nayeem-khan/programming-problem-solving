@@ -1,0 +1,18 @@
+# Template Test Case File
+# This is a template showing the format for LeetCode test cases
+# Copy and modify this for your actual problems
+
+INPUT
+n = 5
+OUTPUT
+10
+
+INPUT
+n = 10
+OUTPUT
+20
+
+INPUT
+n = 0
+OUTPUT
+0

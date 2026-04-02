@@ -19,6 +19,11 @@ import java.util.Scanner;
  * Fast I/O tip for large inputs:
  *   Use BufferedReader + StringTokenizer instead of Scanner when TLE.
  *   See FastIO inner class below.
+ *
+ * Common imports (uncomment as needed):
+ *   import com.cp.datastructures.*;
+ *   import com.cp.algorithms.*;
+ *   import java.util.*;
  */
 @Problem(
         id = "TODO",
