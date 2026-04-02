@@ -325,29 +325,206 @@ return dp[n];
 
 ---
 
-## Problem Selection Guide
+## 🎯 Problem Selection Guide
+
+### Quick Decision Tree
 
 ```
-Graph with capacities     -> NetworkFlowTemplates
-Small sets (n <= 20)      -> BitmaskDPTemplates
-Count numbers in range    -> DigitDPTemplates
-Two-player game           -> GameTheoryTemplates
-Tree path queries         -> HLD / CentroidDecomposition
-Multiple pattern match    -> AhoCorasickTemplates
-Range updates + queries   -> LazySegmentTreeTemplates
-Offline range queries     -> MoAlgorithmTemplates
-Version history           -> PersistentDataStructures
-Polynomial operations     -> FFTTemplates
-Large exponents           -> Matrix Exponentiation
+1. What type of problem is it?
+   │
+   ├─ Array/String manipulation?
+   │   ├─ Find pair/triplet with sum → Two Pointers (SearchTemplates)
+   │   ├─ Subarray with property → Sliding Window (SearchTemplates)
+   │   ├─ Search in sorted/rotated → Binary Search (SearchTemplates)
+   │   ├─ Range sum query → Prefix Sum (SearchTemplates.PrefixSum)
+   │   ├─ Next greater/smaller → Monotonic Stack (AdvancedDataStructures)
+   │   └─ Minimize/maximize answer → Binary Search on Answer (SearchTemplates)
+   │
+   ├─ Graph problem?
+   │   ├─ Shortest path (no negative) → Dijkstra (GraphAlgorithms)
+   │   ├─ Shortest path (negative) → Bellman-Ford (GraphAlgorithms)
+   │   ├─ All pairs shortest → Floyd-Warshall (GraphAlgorithms)
+   │   ├─ Dependency ordering → Topological Sort (GraphAlgorithms)
+   │   ├─ Minimum spanning tree → Kruskal/Prim (GraphAlgorithms)
+   │   ├─ Connected components → DFS/DSU (BFSDFSTemplates, DSU)
+   │   ├─ Detect cycle → DFS or DSU
+   │   ├─ Max flow / min cut → NetworkFlowTemplates
+   │   └─ Find bridges/SCC → AdvancedGraphTemplates
+   │
+   ├─ Tree problem?
+   │   ├─ Level traversal → BFS (BFSDFSTemplates)
+   │   ├─ Path sum/properties → DFS (TreeTemplates)
+   │   ├─ Lowest common ancestor → BinaryLiftingTemplates
+   │   ├─ Range query on tree → HeavyLightDecomposition
+   │   └─ Subtree aggregation → TreeDPTemplates
+   │
+   ├─ Dynamic Programming?
+   │   ├─ Sequence (LCS, LIS) → DPAndMathTemplates
+   │   ├─ Knapsack/subset sum → DPAndMathTemplates
+   │   ├─ Tree DP → TreeDPTemplates
+   │   ├─ Small n (≤20) visit all → BitmaskDPTemplates
+   │   └─ Count numbers with digit constraint → DigitDPTemplates
+   │
+   ├─ Generate all possibilities?
+   │   ├─ All permutations → BacktrackingTemplates.permute()
+   │   ├─ All combinations → BacktrackingTemplates.combine()
+   │   ├─ All subsets → BacktrackingTemplates.subsets()
+   │   └─ Constraint satisfaction → BacktrackingTemplates (N-Queens, Sudoku)
+   │
+   └─ Range query?
+       ├─ Static, immutable → Prefix Sum or SparseTableTemplates
+       ├─ Point update + query → SegmentTree or FenwickTreeTemplates
+       └─ Range update + query → LazySegmentTreeTemplates
 ```
 
 ---
 
-## Project Navigation
+### By Constraint Size
 
-| Category | Path |
-|----------|------|
-| Data Structures | src/main/java/com/cp/datastructures/ |
-| Algorithms | src/main/java/com/cp/algorithms/ |
-| Problems | src/main/java/com/cp/problems/ |
-| Tests | src/test/java/com/cp/ |
+| Constraint | Approach | Template |
+|------------|----------|----------|
+| **n ≤ 10** | Brute force / Bitmask DP | `BitmaskDPTemplates` |
+| **n ≤ 20** | Bitmask DP / Meet in Middle | `BitmaskDPTemplates`, `SearchTemplates` |
+| **n ≤ 500** | O(n³) OK - Floyd-Warshall | `GraphAlgorithms` |
+| **n ≤ 5,000** | O(n²) OK - Basic DP | `DPAndMathTemplates` |
+| **n ≤ 100,000** | O(n log n) - Sorting, Heap, Seg Tree | `SortingTemplates`, `HeapTemplates` |
+| **n ≤ 10⁶** | O(n) - Linear, prefix sum | `SearchTemplates` |
+| **n ≤ 10⁸** | O(log n) - Binary search | `SearchTemplates` |
+| **n ≤ 10¹⁸** | O(log n) - Math, Binary lifting | `DPAndMathTemplates`, `MatrixTemplates` |
+
+---
+
+### By Problem Pattern
+
+#### Optimization Problems ("Find minimum/maximum...")
+
+| Pattern | Signal Keywords | Template |
+|---------|-----------------|----------|
+| Binary Search on Answer | "minimize maximum", "maximize minimum" | `SearchTemplates.binarySearchOnAnswer()` |
+| Greedy | "minimum moves", "can achieve" | `GreedyTemplates` |
+| DP | "minimum cost", "maximum profit" | `DPAndMathTemplates` |
+| Shortest Path | "minimum distance", "cheapest" | `GraphAlgorithms.dijkstra()` |
+
+#### Counting Problems ("Count/Find all...")
+
+| Pattern | Signal Keywords | Template |
+|---------|-----------------|----------|
+| Combinatorics | "how many ways", "count paths" | `CombinatoricsTemplates` |
+| DP Counting | "count subsequences", "count partitions" | `DPAndMathTemplates` |
+| Digit DP | "count numbers in range [L,R]" | `DigitDPTemplates` |
+| Backtracking | "generate all", "find all combinations" | `BacktrackingTemplates` |
+
+#### Existence Problems ("Can we achieve...?")
+
+| Pattern | Signal Keywords | Template |
+|---------|-----------------|----------|
+| Greedy | "can reach", "possible to" | `GreedyTemplates` |
+| DP | "is it possible", "subset sum" | `DPAndMathTemplates` |
+| BFS/DFS | "can traverse", "path exists" | `BFSDFSTemplates` |
+
+---
+
+### By Interview Frequency (FAANG)
+
+#### Tier 1: Must Know (70% of problems)
+
+| Category | % of Interviews | Key Templates |
+|----------|-----------------|---------------|
+| Arrays/Strings | 25% | `SearchTemplates`, `ArrayPatterns` |
+| Trees | 20% | `TreeTemplates`, `BSTTemplates`, `BFSDFSTemplates` |
+| DP | 20% | `DPAndMathTemplates`, `BacktrackingTemplates` |
+| Graphs | 15% | `BFSDFSTemplates`, `GraphAlgorithms` |
+| Linked Lists | 10% | `LinkedListTemplates` |
+
+#### Tier 2: Know Well (25% of problems)
+
+| Category | % of Interviews | Key Templates |
+|----------|-----------------|---------------|
+| Heaps | 8% | `HeapTemplates` |
+| Greedy | 8% | `GreedyTemplates` |
+| String Matching | 5% | `StringAlgorithms` |
+| Range Queries | 4% | `SegmentTree`, `FenwickTreeTemplates` |
+
+#### Tier 3: Advanced (5% of problems - Senior+)
+
+| Category | % of Interviews | Key Templates |
+|----------|-----------------|---------------|
+| Bitmask DP | 2% | `BitmaskDPTemplates` |
+| Network Flow | 1% | `NetworkFlowTemplates` |
+| Advanced Graph | 1% | `AdvancedGraphTemplates` |
+| Advanced String | 1% | `SuffixArrayTemplates`, `AhoCorasickTemplates` |
+
+---
+
+### Company-Specific Focus
+
+#### Google (Algorithm-Heavy)
+```
+Priority 1: Bitmask DP, Graph (SCC, bridges), Binary Lifting
+Priority 2: Digit DP, String algorithms (KMP, suffix array)
+Priority 3: Convex Hull Optimization, FFT
+```
+
+#### Meta/Facebook (Pattern Recognition)
+```
+Priority 1: Backtracking (40% chance), Tree DP
+Priority 2: Linked Lists (reverse k-group), Greedy
+Priority 3: Design patterns (LRU cache)
+```
+
+#### Amazon (Practical + System Design)
+```
+Priority 1: Heaps (top K), Graphs (MST, shortest path)
+Priority 2: DP (standard patterns), Greedy
+Priority 3: Design (rate limiters), Network Flow
+```
+
+#### Microsoft (Data Structures)
+```
+Priority 1: Trees (BST, AVL), Linked Lists
+Priority 2: Arrays (matrix operations), Heaps
+Priority 3: Segment Trees, Design patterns
+```
+
+---
+
+### Problem Recognition Cheatsheet
+
+| See This | Think This | Template |
+|----------|------------|----------|
+| "Two numbers sum to target" | Two pointers or hashmap | `SearchTemplates` |
+| "Longest substring without repeating" | Sliding window | `SearchTemplates` |
+| "Search in rotated sorted array" | Modified binary search | `SearchTemplates` |
+| "Next greater element" | Monotonic stack | `AdvancedDataStructures` |
+| "Maximum in sliding window" | Monotonic deque | `AdvancedDataStructures` |
+| "Number of islands" | Grid BFS/DFS | `BFSDFSTemplates` |
+| "Shortest path in weighted graph" | Dijkstra | `GraphAlgorithms` |
+| "Course schedule" | Topological sort | `GraphAlgorithms` |
+| "Connect all cities minimum cost" | MST (Kruskal/Prim) | `GraphAlgorithms` |
+| "Level order traversal" | BFS | `BFSDFSTemplates` |
+| "Path sum in tree" | DFS | `TreeTemplates` |
+| "Lowest common ancestor" | Binary lifting or Euler tour | `BinaryLiftingTemplates` |
+| "Kth smallest in BST" | Inorder traversal | `BSTTemplates` |
+| "Longest common subsequence" | 2D DP | `DPAndMathTemplates` |
+| "Longest increasing subsequence" | Binary search DP | `DPAndMathTemplates` |
+| "Coin change" | Unbounded knapsack | `DPAndMathTemplates` |
+| "Edit distance" | 2D DP | `DPAndMathTemplates` |
+| "House robber on tree" | Tree DP | `TreeDPTemplates` |
+| "Visit all nodes (n ≤ 20)" | Bitmask DP | `BitmaskDPTemplates` |
+| "Count numbers with digit property" | Digit DP | `DigitDPTemplates` |
+| "All permutations" | Backtracking | `BacktrackingTemplates` |
+| "Generate valid parentheses" | Backtracking | `BacktrackingTemplates` |
+| "Kth largest element" | Heap or quick select | `HeapTemplates` |
+| "Merge K sorted lists" | Min heap | `HeapTemplates` |
+| "Jump game" | Greedy | `GreedyTemplates` |
+| "Meeting rooms needed" | Greedy + sorting | `GreedyTemplates` |
+| "Range sum with updates" | Segment tree or Fenwick | `SegmentTree`, `FenwickTreeTemplates` |
+| "Range minimum (static)" | Sparse table | `SparseTableTemplates` |
+| "Find pattern in text" | KMP | `StringAlgorithms` |
+| "Longest palindrome substring" | Manacher | `StringAlgorithms` |
+| "Maximum flow" | Dinic | `NetworkFlowTemplates` |
+| "Bipartite matching" | Max flow or Hungarian | `NetworkFlowTemplates` |
+| "Two player game optimal play" | Game theory / Minimax | `GameTheoryTemplates` |
+| "LRU/LFU cache" | LinkedHashMap or custom | `DesignTemplates` |
+
+---
