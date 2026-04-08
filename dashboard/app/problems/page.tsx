@@ -83,6 +83,7 @@ interface Filters {
 
 // Constants
 const ITEMS_PER_PAGE = 10;
+const TITLE_CLIP_LENGTH = 50;
 
 const COMPANIES = [
   "Amazon",
@@ -127,6 +128,11 @@ const tableRowVariants = {
     backgroundColor: "rgba(147, 51, 234, 0.05)",
     transition: { duration: 0.2 },
   },
+};
+
+const clipTitle = (title: string) => {
+  if (title.length <= TITLE_CLIP_LENGTH) return title;
+  return `${title.slice(0, TITLE_CLIP_LENGTH)}...`;
 };
 
 const filterCardVariants = {
@@ -655,8 +661,11 @@ export default function ProblemsPage() {
                         >
                           <TableCell className="font-medium px-6">
                             <div className="flex flex-col gap-1">
-                              <span className="text-foreground group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
-                                {problem.title}
+                              <span
+                                className="text-foreground group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors"
+                                title={problem.title}
+                              >
+                                {clipTitle(problem.title)}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {problem.platform} • {problem.problemId}

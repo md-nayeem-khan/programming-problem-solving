@@ -20,6 +20,7 @@ import {
   Save,
   Plus,
   Brain,
+  Eye,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ import {
   staggerItem,
   scaleIn,
 } from "@/lib/animations";
+import { SubmissionDetailsModal } from "@/components/modals/SubmissionDetailsModal";
 
 // Types
 interface Problem {
@@ -69,12 +71,17 @@ interface Problem {
   }>;
   submissions: Array<{
     id: number;
-    timeSpentMinutes: number;
-    usedHints: boolean;
-    approach?: string;
-    notes?: string;
-    passed: boolean;
+    problemId: number;
+    attemptNumber: number;
+    timeSpentSeconds: number;
+    status: string;
+    notes?: string | null;
     submittedAt: string;
+    attemptType: string;
+    wasHintUsed: boolean;
+    mistakeNote?: string | null;
+    approachNote?: string | null;
+    patternRecognitionSeconds?: number | null;
   }>;
 }
 
@@ -576,7 +583,7 @@ export default function ProblemDetailsPage() {
                           <TableHead>Result</TableHead>
                           <TableHead>Time</TableHead>
                           <TableHead>Hints</TableHead>
-                          <TableHead>Notes</TableHead>
+                          <TableHead>Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -587,14 +594,14 @@ export default function ProblemDetailsPage() {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={submission.passed ? "default" : "destructive"}
+                                variant={submission.status === 'solved' ? "default" : "destructive"}
                                 className={
-                                  submission.passed
+                                  submission.status === 'solved'
                                     ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300"
                                     : "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300"
                                 }
                               >
-                                {submission.passed ? (
+                                {submission.status === 'solved' ? (
                                   <>
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Solved
@@ -610,11 +617,11 @@ export default function ProblemDetailsPage() {
                             <TableCell>
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3 w-3 text-muted-foreground" />
-                                {submission.timeSpentMinutes}m
+                                {Math.floor(submission.timeSpentSeconds / 60)}m
                               </span>
                             </TableCell>
                             <TableCell>
-                              {submission.usedHints ? (
+                              {submission.wasHintUsed ? (
                                 <Badge variant="outline" className="text-amber-600 border-amber-300">
                                   <Lightbulb className="h-3 w-3 mr-1" />
                                   Used
@@ -624,9 +631,10 @@ export default function ProblemDetailsPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <span className="text-sm text-muted-foreground max-w-xs truncate block">
-                                {submission.approach || submission.notes || "—"}
-                              </span>
+                              <SubmissionDetailsModal 
+                                submission={submission} 
+                                problemTitle={problem.title} 
+                              />
                             </TableCell>
                           </TableRow>
                         ))}

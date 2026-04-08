@@ -46,9 +46,13 @@ export function LogSubmissionForm({ problemId, onSuccess }: LogSubmissionFormPro
     
     try {
       const submissionData = {
-        ...formData,
-        submittedAt: new Date().toISOString(),
+        problemId: formData.problemId,
         timeSpentSeconds: formData.timeSpentMinutes * 60,
+        status: formData.passed ? 'solved' : 'failed',
+        submittedAt: new Date().toISOString(),
+        notes: formData.notes,
+        wasHintUsed: formData.usedHints,
+        approachNote: formData.approach,
       };
 
       const response = await fetch("/api/submissions", {
