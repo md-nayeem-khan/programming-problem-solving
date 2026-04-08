@@ -1,0 +1,429 @@
+// @ts-nocheck
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+// Helper function to normalize date to start of day (UTC)
+function normalizeDate(date: Date): Date {
+  const normalized = new Date(date)
+  normalized.setUTCHours(0, 0, 0, 0)
+  return normalized
+}
+
+// Helper function to calculate streaks
+function calculateStreaks(dailyProgress: Array<{ date: Date; problemsSolved: number }>) {
+  if (dailyProgress.length === 0) {
+    return { currentStreak: 0, longestStreak: 0, isActiveToday: false }
+  }
+
+  // Sort by date descending (most recent first)
+  const sortedDays = dailyProgress
+    .filter(day => day.problemsSolved > 0)
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+
+  if (sortedDays.length === 0) {
+    return { currentStreak: 0, longestStreak: 0, isActiveToday: false }
+  }
+
+  const today = normalizeDate(new Date())
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  // Check if active today
+  const isActiveToday = sortedDays.some(day => 
+    normalizeDate(day.date).getTime() === today.getTime()
+  )
+
+  // Calculate current streak
+  let currentStreak = 0
+  let currentDate = isActiveToday ? today : yesterday
+
+  for (let i = 0; i < sortedDays.length; i++) {
+    const dayDate = normalizeDate(sortedDays[i].date)
+    
+    if (dayDate.getTime() === currentDate.getTime()) {
+      currentStreak++
+      currentDate.setDate(currentDate.getDate() - 1)
+    } else if (dayDate.getTime() < currentDate.getTime()) {
+      // Gap found, streak ends
+      break
+    }
+  }
+
+  // Calculate longest streak
+  let longestStreak = 0
+  let tempStreak = 0
+  let tempDate: Date | null = null
+
+  for (let i = sortedDays.length - 1; i >= 0; i--) {
+    const dayDate = normalizeDate(sortedDays[i].date)
+    
+    if (tempDate === null) {
+      tempStreak = 1
+      tempDate = new Date(dayDate)
+    } else {
+      const expectedDate = new Date(tempDate)
+      expectedDate.setDate(expectedDate.getDate() + 1)
+      
+      if (dayDate.getTime() === expectedDate.getTime()) {
+        tempStreak++
+        tempDate = dayDate
+      } else {
+        longestStreak = Math.max(longestStreak, tempStreak)
+        tempStreak = 1
+        tempDate = dayDate
+      }
+    }
+  }
+  longestStreak = Math.max(longestStreak, tempStreak)
+
+  return { currentStreak, longestStreak, isActiveToday }
+}
+
+// GET /api/analytics/daily-progress - Get daily progress data with streaks
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const days = parseInt(searchParams.get('days') || '30')
+    const includeStreak = searchParams.get('streak') !== 'false'
+    const format = searchParams.get('format') || 'detailed' // 'detailed' | 'calendar'
+
+    // Calculate date range
+    const endDate = normalizeDate(new Date())
+    const startDate = new Date(endDate)
+    startDate.setDate(startDate.getDate() - days + 1)
+
+    // Get daily progress data
+    const dailyProgress = await prisma.dailyProgress.findMany({
+      where: {
+        date: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      orderBy: { date: 'asc' }
+    })
+
+    // Create a map of existing data
+    const progressMap = new Map(
+      dailyProgress.map(day => [
+        normalizeDate(day.date).toISOString().split('T')[0],
+        day
+      ])
+    )
+
+    // Fill in missing days with zero data
+    const completeData = []
+    const currentDate = new Date(startDate)
+    
+    while (currentDate <= endDate) {
+      const dateKey = currentDate.toISOString().split('T')[0]
+      const existingData = progressMap.get(dateKey)
+      
+      if (existingData) {
+        completeData.push({
+          date: normalizeDate(existingData.date),
+          problemsSolved: existingData.problemsSolved,
+          totalTimeSpent: existingData.totalTimeSpent,
+          patternsWorked: existingData.patternsWorked,
+          mockInterviews: existingData.mockInterviews
+        })
+      } else {
+        completeData.push({
+          date: new Date(currentDate),
+          problemsSolved: 0,
+          totalTimeSpent: 0,
+          patternsWorked: 0,
+          mockInterviews: 0
+        })
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+
+    // Calculate streaks if requested
+    let streakData = null
+    if (includeStreak) {
+      // Get all-time data for accurate streak calculation
+      const allTimeProgress = await prisma.dailyProgress.findMany({
+        where: {
+          problemsSolved: { gt: 0 }
+        },
+        orderBy: { date: 'asc' }
+      })
+
+      streakData = calculateStreaks(allTimeProgress)
+    }
+
+    // Calculate summary statistics
+    const totalProblems = completeData.reduce((sum, day) => sum + day.problemsSolved, 0)
+    const totalTime = completeData.reduce((sum, day) => sum + day.totalTimeSpent, 0)
+    const activeDays = completeData.filter(day => day.problemsSolved > 0).length
+    const avgProblemsPerDay = activeDays > 0 ? totalProblems / activeDays : 0
+    const avgTimePerDay = activeDays > 0 ? totalTime / activeDays : 0
+
+    // Recent trend analysis (last 7 days vs previous 7 days)
+    const recentDays = completeData.slice(-7)
+    const previousDays = completeData.slice(-14, -7)
+    
+    const recentProblems = recentDays.reduce((sum, day) => sum + day.problemsSolved, 0)
+    const previousProblems = previousDays.reduce((sum, day) => sum + day.problemsSolved, 0)
+    
+    const trendPercentage = previousProblems > 0 
+      ? ((recentProblems - previousProblems) / previousProblems) * 100 
+      : recentProblems > 0 ? 100 : 0
+
+    // Format output based on requested format
+    if (format === 'calendar') {
+      // Calendar format for heatmap visualization
+      const calendarData = completeData.map(day => ({
+        date: day.date.toISOString().split('T')[0],
+        count: day.problemsSolved,
+        level: day.problemsSolved === 0 ? 0 : 
+               day.problemsSolved <= 2 ? 1 :
+               day.problemsSolved <= 4 ? 2 :
+               day.problemsSolved <= 6 ? 3 : 4
+      }))
+
+      return NextResponse.json({
+        calendar: calendarData,
+        ...(streakData && { streak: streakData }),
+        summary: {
+          totalDays: completeData.length,
+          activeDays,
+          totalProblems,
+          avgProblemsPerDay: Math.round(avgProblemsPerDay * 10) / 10,
+          trend: {
+            percentage: Math.round(trendPercentage * 10) / 10,
+            direction: trendPercentage > 5 ? 'up' : trendPercentage < -5 ? 'down' : 'stable'
+          }
+        }
+      })
+    }
+
+    // Detailed format
+    const response = {
+      data: completeData.map(day => ({
+        date: day.date.toISOString().split('T')[0],
+        problemsSolved: day.problemsSolved,
+        totalTimeMinutes: Math.round(day.totalTimeSpent / 60),
+        patternsWorked: day.patternsWorked,
+        mockInterviews: day.mockInterviews,
+        avgTimePerProblem: day.problemsSolved > 0 ? Math.round(day.totalTimeSpent / day.problemsSolved / 60) : 0
+      })),
+      ...(streakData && { streak: streakData }),
+      summary: {
+        dateRange: {
+          start: startDate.toISOString().split('T')[0],
+          end: endDate.toISOString().split('T')[0],
+          days: completeData.length
+        },
+        totals: {
+          problems: totalProblems,
+          timeMinutes: Math.round(totalTime / 60),
+          patterns: Math.max(...completeData.map(d => d.patternsWorked), 0),
+          mockInterviews: completeData.reduce((sum, day) => sum + day.mockInterviews, 0),
+          activeDays
+        },
+        averages: {
+          problemsPerDay: Math.round(avgProblemsPerDay * 10) / 10,
+          timePerDay: Math.round(avgTimePerDay / 60),
+          problemsPerActiveDay: Math.round((totalProblems / Math.max(activeDays, 1)) * 10) / 10
+        },
+        trend: {
+          recent7Days: recentProblems,
+          previous7Days: previousProblems,
+          changePercentage: Math.round(trendPercentage * 10) / 10,
+          direction: trendPercentage > 5 ? 'improving' : trendPercentage < -5 ? 'declining' : 'stable'
+        }
+      },
+      insights: [] as string[]
+    }
+
+    // Generate insights and recommendations
+    const insights = []
+    
+    if (streakData && streakData.currentStreak >= 7) {
+      insights.push(`🔥 Amazing ${streakData.currentStreak}-day streak! Keep the momentum going!`)
+    } else if (streakData && streakData.currentStreak > 0) {
+      insights.push(`Good ${streakData.currentStreak}-day streak. Aim for 7+ days for habit formation.`)
+    } else if (streakData && !streakData.isActiveToday) {
+      insights.push("No activity today. Solve at least 1 problem to start/continue your streak!")
+    }
+
+    if (avgProblemsPerDay < 1) {
+      insights.push("Try to solve at least 1 problem per day for consistent progress.")
+    } else if (avgProblemsPerDay >= 3) {
+      insights.push("Excellent daily practice! You're solving 3+ problems per day on average.")
+    }
+
+    if (trendPercentage > 20) {
+      insights.push("📈 Great improvement trend! You're solving more problems recently.")
+    } else if (trendPercentage < -20) {
+      insights.push("📉 Practice frequency has decreased recently. Try to get back to regular solving.")
+    }
+
+    if (activeDays / completeData.length < 0.3) {
+      insights.push("Increase consistency - aim for at least 3-4 active days per week.")
+    }
+
+    response.insights = insights
+
+    return NextResponse.json(response)
+  } catch (error) {
+    console.error('Error fetching daily progress:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch daily progress' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST /api/analytics/daily-progress - Update daily progress (usually called by other APIs)
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { 
+      date = new Date(),
+      problemsSolved = 0,
+      timeSpentSeconds = 0,
+      patternsWorked = 0,
+      mockInterviews = 0 
+    } = body
+
+    const normalizedDate = normalizeDate(new Date(date))
+
+    // Update or create daily progress record
+    const updatedProgress = await prisma.dailyProgress.upsert({
+      where: { date: normalizedDate },
+      update: {
+        problemsSolved: { increment: problemsSolved },
+        totalTimeSpent: { increment: timeSpentSeconds },
+        patternsWorked: Math.max(patternsWorked, 0), // Set to max, not increment
+        mockInterviews: { increment: mockInterviews }
+      },
+      create: {
+        date: normalizedDate,
+        problemsSolved,
+        totalTimeSpent: timeSpentSeconds,
+        patternsWorked,
+        mockInterviews
+      }
+    })
+
+    return NextResponse.json({ 
+      success: true, 
+      progress: updatedProgress 
+    }, { status: 201 })
+  } catch (error) {
+    console.error('Error updating daily progress:', error)
+    return NextResponse.json(
+      { error: 'Failed to update daily progress' },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT /api/analytics/daily-progress - Recalculate daily progress from submissions
+export async function PUT(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const days = parseInt(searchParams.get('days') || '30')
+    const force = searchParams.get('force') === 'true'
+
+    const endDate = normalizeDate(new Date())
+    const startDate = new Date(endDate)
+    startDate.setDate(startDate.getDate() - days + 1)
+
+    // Get all submissions in the date range
+    const submissions = await prisma.submission.findMany({
+      where: {
+        submittedAt: {
+          gte: startDate,
+          lte: new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1) // End of day
+        }
+      },
+      include: {
+        problem: {
+          include: {
+            patterns: {
+              include: {
+                pattern: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { submittedAt: 'asc' }
+    })
+
+    // Group submissions by date
+    const submissionsByDate = new Map<string, any[]>()
+    
+    submissions.forEach(submission => {
+      const dateKey = normalizeDate(submission.submittedAt).toISOString().split('T')[0]
+      if (!submissionsByDate.has(dateKey)) {
+        submissionsByDate.set(dateKey, [])
+      }
+      submissionsByDate.get(dateKey)!.push(submission)
+    })
+
+    // Recalculate daily progress for each day
+    const updatedDays = []
+    
+    for (const [dateKey, daySubmissions] of submissionsByDate.entries()) {
+      const date = new Date(dateKey)
+      
+      // Calculate metrics for this day
+      const problemsSolved = daySubmissions.filter(s => s.status === 'solved').length
+      const totalTimeSpent = daySubmissions.reduce((sum, s) => sum + s.timeSpentSeconds, 0)
+      
+      // Count unique patterns worked on
+      const patternsSet = new Set<string>()
+      daySubmissions.forEach(submission => {
+        submission.problem.patterns.forEach((pp: any) => {
+          patternsSet.add(pp.pattern.name)
+        })
+      })
+      const patternsWorked = patternsSet.size
+
+      // Mock interviews would need separate tracking
+      const mockInterviews = 0 // TODO: Implement when mock interview model is added
+
+      // Update database
+      const updatedProgress = await prisma.dailyProgress.upsert({
+        where: { date: normalizeDate(date) },
+        update: {
+          problemsSolved,
+          totalTimeSpent,
+          patternsWorked,
+          mockInterviews
+        },
+        create: {
+          date: normalizeDate(date),
+          problemsSolved,
+          totalTimeSpent,
+          patternsWorked,
+          mockInterviews
+        }
+      })
+
+      updatedDays.push(updatedProgress)
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Recalculated progress for ${updatedDays.length} days`,
+      updatedDays: updatedDays.length,
+      dateRange: {
+        start: startDate.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0]
+      }
+    })
+  } catch (error) {
+    console.error('Error recalculating daily progress:', error)
+    return NextResponse.json(
+      { error: 'Failed to recalculate daily progress' },
+      { status: 500 }
+    )
+  }
+}

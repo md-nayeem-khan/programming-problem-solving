@@ -1,0 +1,262 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Problem {
+  id         Int      @id @default(autoincrement())
+  platform   String   // leetcode, codeforces, atcoder, hackerrank, other
+  problemId  String   // e.g., "1", "4A", "1234B"
+  title      String
+  difficulty String   // easy, medium, hard, unrated
+  url        String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // NEW FIELDS for FAANG readiness
+  source     String   @default("NeetCode")  // "NeetCode" | "Company"
+  company    String?  // "Amazon" | "Google" | "Meta" | "Apple" | "Netflix" | "Microsoft" | null
+
+  tags           ProblemTag[]
+  patterns       ProblemPattern[]
+  submissions    Submission[]
+  sessions       Session[]
+  mockInterviews MockInterview[]
+
+  @@unique([platform, problemId])
+  @@index([platform])
+  @@index([difficulty])
+  @@index([source])
+  @@index([company])
+  @@index([company, source]) // NEW: Composite for company analytics
+  @@index([source, difficulty]) // NEW: For filtered company queries
+  @@map("problems")
+}
+
+model ProblemTag {
+  id        Int     @id @default(autoincrement())
+  problemId Int
+  tag       String
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+  @@index([tag])
+  @@map("problem_tags")
+}
+
+model Pattern {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  category    String
+  description String?
+
+  problems ProblemPattern[]
+
+  @@index([category])
+  @@map("patterns")
+}
+
+model ProblemPattern {
+  id        Int @id @default(autoincrement())
+  problemId Int
+  patternId Int
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  pattern Pattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+
+  @@unique([problemId, patternId])
+  @@index([problemId])
+  @@index([patternId])
+  @@index([patternId, problemId]) // NEW: For pattern-based problem queries
+  @@map("problem_patterns")
+}
+
+model Submission {
+  id               Int      @id @default(autoincrement())
+  problemId        Int
+  attemptNumber    Int      // 1, 2, 3, ...
+  timeSpentSeconds Int      @map("time_spent_seconds")
+  status           String   // solved, failed, partial, abandoned
+  notes            String?
+  submittedAt      DateTime @map("submitted_at") // When the problem was actually solved
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  // NEW FIELDS for quality tracking
+  attemptType                String   @default("First")    // "First" | "Revision"  
+  wasHintUsed                Boolean  @default(false) @map("was_hint_used")
+  mistakeNote                String?  @map("mistake_note")
+  approachNote               String?  @map("approach_note")
+  patternRecognitionSeconds  Int?     @map("pattern_recognition_seconds")
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  revisions Revision[] // NEW: Spaced repetition revisions
+
+  @@index([problemId])
+  @@index([submittedAt])
+  @@index([status])
+  @@index([attemptType])
+  @@index([patternRecognitionSeconds])
+  @@index([submittedAt, status])
+  @@index([problemId, status, submittedAt])
+  @@map("submissions")
+}
+
+model Session {
+  id              Int       @id @default(autoincrement())
+  problemId       Int
+  startedAt       DateTime
+  endedAt         DateTime?
+  durationSeconds Int?
+  notes           String?
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+  @@index([startedAt])
+  @@map("sessions")
+}
+
+// NEW MODEL: Spaced Repetition System
+model Revision {
+  id             Int       @id @default(autoincrement())
+  submissionId   Int
+  intervalLevel  Int       @default(0) // 0=1day, 1=3days, 2=7days, etc.
+  nextReviewDate DateTime  
+  completed      Boolean   @default(false)
+  completedAt    DateTime?
+  
+  // Result of revision attempt
+  wasSuccessful      Boolean?
+  timeSpentSeconds   Int?
+  solvedWithoutHint  Boolean? // Critical for interview readiness
+  confidenceLevel    Int?     // 1-5 scale: how confident they felt
+  difficultyRating   Int?     // 1-5 scale: how hard it felt during revision
+  notes              String?
+  previousRevisionId Int?     // Link to previous revision in chain
+  
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  
+  @@index([nextReviewDate])
+  @@index([completed])
+  @@index([submissionId])
+  @@map("revisions")
+}
+
+// NEW MODEL: Mock Interview Simulation
+model MockInterview {
+  id               Int      @id @default(autoincrement())
+  problemId        Int      @map("problem_id")
+  date             DateTime @default(now())
+  timeLimit        Int      @default(2700) @map("time_limit") // 45 minutes in seconds
+
+  // Performance metrics
+  timeTakenSeconds          Int?     @map("time_taken_seconds")
+  patternRecognitionSeconds Int?     @map("pattern_recognition_seconds")
+  solved                    Boolean  @default(false)
+  explanationScore          Int?     @map("explanation_score") // 1-5
+  codeQualityScore          Int?     @map("code_quality_score") // 1-5
+  overallScore              Float?   @map("overall_score")     // Auto-calculated average
+
+  notes            String?
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([problemId])
+  @@index([overallScore, date])
+  @@map("mock_interviews")
+}
+
+// NEW MODEL: Daily Progress Tracking for Streaks
+model DailyProgress {
+  id              Int      @id @default(autoincrement())
+  date            DateTime @unique
+  problemsSolved  Int      @default(0)
+  totalTimeSpent  Int      @default(0) // seconds
+  patternsWorked  Int      @default(0)
+  mockInterviews  Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([date])
+  @@map("daily_progress")
+}
+
+// NEW MODEL: Goals & Milestones for Structured Interview Prep
+model Goal {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  type        String   // "problemCount" | "patternMastery" | "companyReady" | "speedImprovement" | "streakDays" | "custom"
+  
+  // Target metrics
+  targetValue     Int      // e.g., 500 problems, 30 days streak, 100% pattern mastery
+  currentValue    Int      @default(0)
+  unit            String   @default("problems") // "problems" | "patterns" | "days" | "minutes" | "percentage"
+  
+  // Timeline
+  startDate       DateTime @default(now())
+  deadline        DateTime
+  
+  // Status & Priority
+  status          String   @default("active") // "active" | "completed" | "paused" | "abandoned"
+  priority        String   @default("medium") // "critical" | "high" | "medium" | "low"
+  
+  // Optional filters for targeted goals
+  targetPattern   String?  // e.g., "Graphs", "Dynamic Programming"
+  targetCompany   String?  // e.g., "Amazon", "Google"
+  targetDifficulty String? // e.g., "Hard"
+  
+  // Progress tracking
+  completedAt     DateTime?
+  lastProgressUpdate DateTime @default(now())
+  
+  // Milestones
+  milestones      Milestone[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([status])
+  @@index([deadline])
+  @@index([priority, status])
+  @@index([type])
+  @@map("goals")
+}
+
+model Milestone {
+  id              Int      @id @default(autoincrement())
+  goalId          Int
+  
+  title           String
+  description     String?
+  targetValue     Int      // Milestone checkpoint value
+  dueDate         DateTime
+  
+  // Status
+  completed       Boolean  @default(false)
+  completedDate   DateTime?
+  
+  // Optional: Track what triggered completion
+  completionNote  String?
+  
+  goal            Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([goalId])
+  @@index([dueDate])
+  @@index([completed])
+  @@map("milestones")
+}
