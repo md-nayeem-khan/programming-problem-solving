@@ -38,6 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AddProblemForm } from "@/components/forms/AddProblemForm";
 import {
   staggerContainer,
   staggerItem,
@@ -245,11 +246,9 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
+          className="mt-6"
         >
-          <Button className="mt-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg shadow-purple-500/25">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Your First Problem
-          </Button>
+          <AddProblemForm />
         </motion.div>
       )}
     </motion.div>
@@ -389,16 +388,27 @@ export default function ProblemsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="relative">
-          <h1 className="relative text-4xl font-bold">
-            <span className="text-gradient-purple-pink">
-              Problems
-            </span>
-          </h1>
-          <p className="text-muted-foreground mt-2 text-base">
-            <Sparkles className="inline h-4 w-4 mr-2 text-electric-purple" />
-            Track and manage your interview preparation problems
-          </p>
+        <div className="relative flex items-center justify-between">
+          <div>
+            <h1 className="relative text-4xl font-bold">
+              <span className="text-gradient-purple-pink">
+                Problems
+              </span>
+            </h1>
+            <p className="text-muted-foreground mt-2 text-base">
+              <Sparkles className="inline h-4 w-4 mr-2 text-electric-purple" />
+              Track and manage your interview preparation problems
+            </p>
+          </div>
+          
+          {/* Add Problem Button */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <AddProblemForm />
+          </motion.div>
         </div>
       </motion.div>
 

@@ -100,6 +100,15 @@ const config: Config = {
           4: "hsl(var(--chart-4))",
           5: "hsl(var(--chart-5))",
         },
+        // Premium Color Palette
+        "electric-purple": "hsl(var(--electric-purple))",
+        "bright-pink": "hsl(var(--bright-pink))",
+        "neon-blue": "hsl(var(--neon-blue))",
+        "electric-cyan": "hsl(var(--electric-cyan))",
+        "vibrant-green": "hsl(var(--vibrant-green))",
+        "golden-yellow": "hsl(var(--golden-yellow))",
+        "sunset-orange": "hsl(var(--sunset-orange))",
+        "coral-red": "hsl(var(--coral-red))",
         // Enhanced V2 Color Palette
         cyber: {
           start: "hsl(var(--cyber-start))",

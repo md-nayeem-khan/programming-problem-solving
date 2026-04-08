@@ -28,7 +28,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Table,
@@ -148,7 +156,7 @@ export default function ProblemDetailsPage() {
     usedHints: false,
     approach: "",
     notes: "",
-    passed: false,
+    passed: true,  // Default to solved/passed
   });
   const [submissionLoading, setSubmissionLoading] = useState(false);
 
@@ -223,14 +231,29 @@ export default function ProblemDetailsPage() {
     });
   };
 
-  // Use timer time for submission
-  const useTimerTime = () => {
-    const minutes = Math.ceil(timer.elapsedTime / 60);
-    setSubmissionForm(prev => ({
-      ...prev,
-      timeSpentMinutes: minutes,
-    }));
-    toast.success(`Time set to ${minutes} minutes`);
+  // Open submission form with timer auto-pause and time pre-fill
+  const openSubmissionForm = () => {
+    // Auto-pause the timer if it's running
+    if (timer.isRunning) {
+      setTimer(prev => ({
+        ...prev,
+        isRunning: false,
+        startTime: null,
+      }));
+    }
+    
+    // Auto-fill the time spent if timer has elapsed time
+    if (timer.elapsedTime > 0) {
+      const minutes = Math.ceil(timer.elapsedTime / 60);
+      setSubmissionForm(prev => ({
+        ...prev,
+        timeSpentMinutes: minutes,
+      }));
+      toast.success(`Time automatically set to ${minutes} minutes from timer`);
+    }
+    
+    // Open the modal
+    setShowSubmissionForm(true);
   };
 
   // Submit new attempt
@@ -343,15 +366,12 @@ export default function ProblemDetailsPage() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             {problem.title}
           </h1>
-          <p className="text-muted-foreground">
-            {problem.platform} • {problem.problemId}
-          </p>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Timer & Problem Log */}
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        {/* Left Column - Timer & Submission History (3/5 width) */}
+        <div className="lg:col-span-3 space-y-6">
           {/* Timer Card */}
           <motion.div
             variants={staggerItem}
@@ -367,245 +387,160 @@ export default function ProblemDetailsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Timer Display */}
+                {/* Timer Display with Reset Button */}
                 <div className="text-center">
-                  <div className="text-4xl font-mono font-bold text-emerald-600 dark:text-emerald-400 mb-2">
-                    {formatTime(timer.elapsedTime)}
+                  <div className="flex items-center justify-center gap-4 mb-4">
+                    <div className="text-4xl font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatTime(timer.elapsedTime)}
+                    </div>
+                    <Button onClick={resetTimer} variant="outline" size="icon" disabled={timer.elapsedTime === 0}>
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="flex justify-center gap-2">
+                  
+                  {/* Timer Controls */}
+                  <div className="flex justify-center gap-3 w-full max-w-sm mx-auto">
                     {!timer.isRunning ? (
-                      <Button onClick={startTimer} className="bg-emerald-600 hover:bg-emerald-700">
+                      <Button onClick={startTimer} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
                         <Play className="h-4 w-4 mr-2" />
                         Start
                       </Button>
                     ) : (
-                      <Button onClick={pauseTimer} variant="outline">
+                      <Button onClick={pauseTimer} className="flex-1" variant="outline">
                         <Pause className="h-4 w-4 mr-2" />
                         Pause
                       </Button>
                     )}
-                    <Button onClick={resetTimer} variant="outline" disabled={timer.elapsedTime === 0}>
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Reset
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Quick Actions */}
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => setShowSubmissionForm(true)}
-                    className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Log New Attempt
-                  </Button>
-                  
-                  {timer.elapsedTime > 0 && (
-                    <Button onClick={useTimerTime} variant="outline" className="w-full">
-                      <Clock className="h-4 w-4 mr-2" />
-                      Use Timer ({Math.ceil(timer.elapsedTime / 60)}m)
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Submission Form */}
-          {showSubmissionForm && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-            >
-              <Card className="border-gradient-to-r from-purple-200 to-pink-200 dark:from-purple-900/50 dark:to-pink-900/50 shadow-lg shadow-purple-500/10">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Save className="h-5 w-5 text-purple-600" />
-                    Log This Attempt
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmitAttempt} className="space-y-4">
-                    {/* Time Input */}
-                    <div>
-                      <Label htmlFor="timeSpent" className="text-sm font-semibold">
-                        Time Spent (minutes) *
-                      </Label>
-                      <Input
-                        id="timeSpent"
-                        type="number"
-                        min="1"
-                        value={submissionForm.timeSpentMinutes || ""}
-                        onChange={(e) =>
-                          setSubmissionForm(prev => ({
-                            ...prev,
-                            timeSpentMinutes: parseInt(e.target.value) || 0,
-                          }))
-                        }
-                        className="mt-1"
-                        placeholder="Enter minutes"
-                        required
-                      />
-                    </div>
-
-                    {/* Status Toggles */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="passed"
-                          checked={submissionForm.passed}
-                          onCheckedChange={(checked) =>
-                            setSubmissionForm(prev => ({ ...prev, passed: checked }))
-                          }
-                        />
-                        <Label htmlFor="passed" className="text-sm font-medium">
-                          {submissionForm.passed ? "✅ Solved" : "❌ Failed"}
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="usedHints"
-                          checked={submissionForm.usedHints}
-                          onCheckedChange={(checked) =>
-                            setSubmissionForm(prev => ({ ...prev, usedHints: checked }))
-                          }
-                        />
-                        <Label htmlFor="usedHints" className="text-sm font-medium">
-                          Used Hints
-                        </Label>
-                      </div>
-                    </div>
-
-                    {/* Approach */}
-                    <div>
-                      <Label htmlFor="approach" className="text-sm font-semibold">
-                        Approach / Solution
-                      </Label>
-                      <Textarea
-                        id="approach"
-                        value={submissionForm.approach}
-                        onChange={(e) =>
-                          setSubmissionForm(prev => ({ ...prev, approach: e.target.value }))
-                        }
-                        className="mt-1"
-                        placeholder="Describe your approach..."
-                        rows={3}
-                      />
-                    </div>
-
-                    {/* Notes */}
-                    <div>
-                      <Label htmlFor="notes" className="text-sm font-semibold">
-                        Additional Notes
-                      </Label>
-                      <Textarea
-                        id="notes"
-                        value={submissionForm.notes}
-                        onChange={(e) =>
-                          setSubmissionForm(prev => ({ ...prev, notes: e.target.value }))
-                        }
-                        className="mt-1"
-                        placeholder="Any mistakes, learnings, or insights..."
-                        rows={2}
-                      />
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <Button
-                        type="submit"
-                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                        disabled={submissionLoading}
-                      >
-                        {submissionLoading ? "Submitting..." : "Log Attempt"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowSubmissionForm(false)}
-                        disabled={submissionLoading}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </div>
-
-        {/* Right Column - Problem Info & History */}
-        <div className="space-y-6">
-          {/* Problem Information Card */}
-          <motion.div
-            variants={staggerItem}
-            initial="hidden"
-            animate="visible"
-          >
-            <Card className="border-gradient-to-r from-purple-200 to-pink-200 dark:from-purple-900/50 dark:to-pink-900/50 shadow-lg shadow-purple-500/10">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-purple-600" />
-                    Problem Information
-                  </span>
-                  {problem.url && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={problem.url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Open Problem
-                      </a>
-                    </Button>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Badge className={getDifficultyColor(problem.difficulty)}>
-                    {problem.difficulty}
-                  </Badge>
-                  {problem.company && (
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800">
-                      {problem.company}
-                    </Badge>
-                  )}
-                </div>
-                
-                {problem.patterns.length > 0 && (
-                  <div>
-                    <Label className="text-sm font-semibold text-muted-foreground mb-2 block">
-                      Patterns & Tags
-                    </Label>
-                    <div className="flex flex-wrap gap-2">
-                      {problem.patterns.map((pattern) => (
-                        <Badge
-                          key={pattern.id}
-                          variant="secondary"
-                          className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
+                    
+                    <Dialog open={showSubmissionForm} onOpenChange={setShowSubmissionForm}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          onClick={openSubmissionForm}
+                          className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
                         >
-                          {pattern.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                          <Plus className="h-4 w-4 mr-2" />
+                          Submit
+                        </Button>
+                      </DialogTrigger>
+                      
+                      <DialogContent className="w-full max-w-[500px] max-h-[90vh] overflow-hidden bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-2xl shadow-xl">
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 20 }}
+                          className="relative z-10"
+                        >
+                          {/* Header */}
+                          <DialogHeader className="pb-6 border-b border-gray-200">
+                            <DialogTitle className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
+                              <Save className="h-5 w-5 text-purple-600" />
+                              Log Attempt
+                            </DialogTitle>
+                          </DialogHeader>
 
-                {problem.description && (
-                  <div>
-                    <Label className="text-sm font-semibold text-muted-foreground mb-2 block">
-                      Description
-                    </Label>
-                    <p className="text-sm text-foreground leading-relaxed">
-                      {problem.description}
-                    </p>
+                          {/* Form */}
+                          <form onSubmit={handleSubmitAttempt} className="space-y-6 pt-6 overflow-y-auto max-h-[70vh]">
+                            {/* Time Input */}
+                            <div className="space-y-2">
+                              <Label htmlFor="timeSpent" className="text-sm font-medium text-foreground">
+                                Time Spent (minutes) *
+                              </Label>
+                              <Input
+                                id="timeSpent"
+                                type="number"
+                                min="1"
+                                value={submissionForm.timeSpentMinutes || ""}
+                                onChange={(e) =>
+                                  setSubmissionForm(prev => ({
+                                    ...prev,
+                                    timeSpentMinutes: parseInt(e.target.value) || 0,
+                                  }))
+                                }
+                                className="h-10 !border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400"
+                                placeholder="Enter minutes"
+                                required
+                              />
+                            </div>
+
+                            {/* Status Checkboxes */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Checkbox
+                                  id="passed"
+                                  checked={submissionForm.passed}
+                                  onCheckedChange={(checked) =>
+                                    setSubmissionForm(prev => ({ ...prev, passed: !!checked }))
+                                  }
+                                />
+                                <Label htmlFor="passed" className="text-sm font-medium cursor-pointer">
+                                  Solved
+                                </Label>
+                              </div>
+
+                              <div className="flex items-center space-x-3">
+                                <Checkbox
+                                  id="usedHints"
+                                  checked={submissionForm.usedHints}
+                                  onCheckedChange={(checked) =>
+                                    setSubmissionForm(prev => ({ ...prev, usedHints: !!checked }))
+                                  }
+                                />
+                                <Label htmlFor="usedHints" className="text-sm font-medium cursor-pointer">
+                                  Used Hints
+                                </Label>
+                              </div>
+                            </div>
+
+                            {/* Approach */}
+                            <div className="space-y-2">
+                              <Label htmlFor="approach" className="text-sm font-medium text-foreground">
+                                Approach / Solution
+                              </Label>
+                              <Textarea
+                                id="approach"
+                                value={submissionForm.approach}
+                                onChange={(e) =>
+                                  setSubmissionForm(prev => ({ ...prev, approach: e.target.value }))
+                                }
+                                className="!border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400"
+                                placeholder="Describe your approach..."
+                                rows={3}
+                              />
+                            </div>
+
+                            {/* Notes */}
+                            <div className="space-y-2">
+                              <Label htmlFor="notes" className="text-sm font-medium text-foreground">
+                                Additional Notes
+                              </Label>
+                              <Textarea
+                                id="notes"
+                                value={submissionForm.notes}
+                                onChange={(e) =>
+                                  setSubmissionForm(prev => ({ ...prev, notes: e.target.value }))
+                                }
+                                className="!border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400"
+                                placeholder="Any mistakes, learnings, or insights..."
+                                rows={2}
+                              />
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex pt-4">
+                              <Button
+                                type="submit"
+                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold"
+                                disabled={submissionLoading}
+                              >
+                                {submissionLoading ? "Submitting..." : "Log Attempt"}
+                              </Button>
+                            </div>
+                          </form>
+                        </motion.div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -697,6 +632,97 @@ export default function ProblemDetailsPage() {
                         ))}
                       </TableBody>
                     </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Right Column - Problem Information Only (2/5 width) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Problem Information Card */}
+          <motion.div
+            variants={staggerItem}
+            initial="hidden"
+            animate="visible"
+          >
+            <Card className="border-gradient-to-r from-purple-200 to-pink-200 dark:from-purple-900/50 dark:to-pink-900/50 shadow-lg shadow-purple-500/10">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-purple-600" />
+                    Problem Information
+                  </span>
+                  {problem.url && (
+                    <Button variant="outline" size="icon" asChild>
+                      <a href={problem.url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Platform */}
+                <div>
+                  <Label className="text-sm font-semibold text-muted-foreground mb-2 block">
+                    Platform
+                  </Label>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
+                    {problem.platform} • {problem.problemId}
+                  </Badge>
+                </div>
+
+                {/* Difficulty */}
+                <div>
+                  <Label className="text-sm font-semibold text-muted-foreground mb-2 block">
+                    Difficulty
+                  </Label>
+                  <Badge className={getDifficultyColor(problem.difficulty)}>
+                    {problem.difficulty}
+                  </Badge>
+                </div>
+
+                {/* Company */}
+                {problem.company && (
+                  <div>
+                    <Label className="text-sm font-semibold text-muted-foreground mb-2 block">
+                      Company
+                    </Label>
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800">
+                      {problem.company}
+                    </Badge>
+                  </div>
+                )}
+                
+                {problem.patterns.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-semibold text-muted-foreground mb-2 block">
+                      Patterns & Tags
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {problem.patterns.map((pattern) => (
+                        <Badge
+                          key={pattern.id}
+                          variant="secondary"
+                          className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
+                        >
+                          {pattern.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {problem.description && (
+                  <div>
+                    <Label className="text-sm font-semibold text-muted-foreground mb-2 block">
+                      Description
+                    </Label>
+                    <p className="text-sm text-foreground leading-relaxed">
+                      {problem.description}
+                    </p>
                   </div>
                 )}
               </CardContent>

@@ -10,7 +10,7 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AlgoMetrics — Interview Preparation Analytics Dashboard",
+  title: "AlgoMetrics - Interview Preparation Analytics Dashboard",
   description: "Track competitive programming problems and improve interview preparation with pattern mastery insights and analytics",
 };
 

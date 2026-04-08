@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { AddProblemForm } from "@/components/forms/AddProblemForm";
 import { EnhancedTooltip } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
 import { fadeInUp, buttonRipple } from "@/lib/animations";
@@ -54,10 +53,13 @@ export function Navbar() {
         transition={{ duration: 0.3 }}
       />
 
-      {/* Search Bar */}
-      <div className="flex items-center gap-4 flex-1 max-w-xl relative z-10">
+      {/* Left Spacer - matches width of right section for perfect centering */}
+      <div className="flex-1" />
+
+      {/* Centered Search Bar */}
+      <div className="flex items-center justify-center flex-1 max-w-xl relative z-10">
         <motion.div 
-          className="relative flex-1"
+          className="relative w-full max-w-md"
           animate={{ 
             scale: searchFocused ? 1.01 : 1,
           }}
@@ -110,14 +112,7 @@ export function Navbar() {
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-3 relative z-10">
-        {/* Add Problem Button */}
-        <EnhancedTooltip content="Add new problem" variant="premium">
-          <motion.div variants={buttonRipple} whileHover="hover" whileTap="tap">
-            <AddProblemForm />
-          </motion.div>
-        </EnhancedTooltip>
-
+      <div className="flex items-center justify-end gap-3 flex-1 relative z-10">
         {/* Profile Menu */}
         <EnhancedTooltip content="Account settings" variant="glass">
           <DropdownMenu>
