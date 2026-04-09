@@ -102,6 +102,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!Array.isArray(milestones) || milestones.length === 0) {
+      return NextResponse.json(
+        { error: 'Each goal must include at least one milestone' },
+        { status: 400 }
+      );
+    }
+
     const goal = await prisma.goal.create({
       data: {
         title,
@@ -109,6 +116,7 @@ export async function POST(request: NextRequest) {
         type,
         targetValue,
         unit: unit || 'problems',
+        startDate: body.startDate ? new Date(body.startDate) : new Date(),
         deadline: new Date(deadline),
         priority: priority || 'medium',
         targetPattern,
@@ -116,14 +124,14 @@ export async function POST(request: NextRequest) {
         targetDifficulty,
         status: 'active',
         currentValue: 0,
-        milestones: milestones ? {
+        milestones: {
           create: milestones.map((m: any) => ({
             title: m.title,
             description: m.description,
-            targetValue: m.targetValue,
+            targetValue: m.targetValue || 1,
             dueDate: new Date(m.dueDate)
           }))
-        } : undefined
+        }
       },
       include: {
         milestones: true

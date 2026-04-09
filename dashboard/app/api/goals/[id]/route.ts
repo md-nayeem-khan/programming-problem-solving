@@ -50,8 +50,11 @@ export async function PATCH(
     const {
       title,
       description,
+      type,
       targetValue,
       currentValue,
+      unit,
+      startDate,
       deadline,
       status,
       priority,
@@ -64,8 +67,11 @@ export async function PATCH(
     
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
+    if (type !== undefined) updateData.type = type;
     if (targetValue !== undefined) updateData.targetValue = targetValue;
     if (currentValue !== undefined) updateData.currentValue = currentValue;
+    if (unit !== undefined) updateData.unit = unit;
+    if (startDate !== undefined) updateData.startDate = new Date(startDate);
     if (deadline !== undefined) updateData.deadline = new Date(deadline);
     if (status !== undefined) {
       updateData.status = status;
