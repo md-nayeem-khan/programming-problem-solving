@@ -7,15 +7,31 @@ import { PatternStrengthCard } from "@/components/dashboard/PatternStrengthCard"
 import { WeakAreasCard } from "@/components/dashboard/WeakAreasCard";
 import { TimePerformanceCard } from "@/components/dashboard/TimePerformanceCard";
 import { CompanyReadinessCard } from "@/components/dashboard/CompanyReadinessCard";
-import { RevisionQueueCard } from "@/components/dashboard/RevisionQueueCard";
-import { MockInterviewCard } from "@/components/dashboard/MockInterviewCard";
+import { AnalyticsHighlightsCard } from "@/components/dashboard/AnalyticsHighlightsCard";
+import { DashboardHeaderStats } from "@/components/dashboard/DashboardHeaderStats";
 import { staggerContainer, staggerItem } from "@/lib/animations";
 import { Sparkles } from "lucide-react";
+import type { Variants } from "framer-motion";
+
+const cardHoverVariants: Variants = {
+  rest: {
+    scale: 1,
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+  },
+  hover: {
+    scale: 1.02,
+    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+    transition: {
+      duration: 0.3,
+      ease: "easeOut",
+    },
+  },
+};
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen">
-      <div className="space-y-8 p-6 max-w-7xl mx-auto">
+    <div className="min-h-screen relative overflow-hidden">
+      <div className="space-y-8 p-6 max-w-7xl mx-auto relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -35,6 +51,8 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
+        <DashboardHeaderStats />
+
         {/* Dashboard Grid */}
         <motion.div
           variants={staggerContainer}
@@ -43,35 +61,110 @@ export default function DashboardPage() {
           className="grid grid-cols-1 xl:grid-cols-2 gap-8"
         >
           {/* Row 1: Readiness Score & Daily Progress */}
-          <motion.div variants={staggerItem} className="xl:col-span-1">
-            <ReadinessCard />
+          <motion.div
+            variants={staggerItem}
+            className="xl:col-span-1"
+          >
+            <motion.div
+              variants={cardHoverVariants}
+              initial="rest"
+              whileHover="hover"
+              whileTap={{ scale: 0.98 }}
+              className="cursor-pointer"
+            >
+              <ReadinessCard />
+            </motion.div>
           </motion.div>
-          <motion.div variants={staggerItem} className="xl:col-span-1">
-            <DailyProgressCard />
+          <motion.div
+            variants={staggerItem}
+            className="xl:col-span-1"
+          >
+            <motion.div
+              variants={cardHoverVariants}
+              initial="rest"
+              whileHover="hover"
+              whileTap={{ scale: 0.98 }}
+              className="cursor-pointer"
+            >
+              <DailyProgressCard />
+            </motion.div>
           </motion.div>
 
-          {/* Row 2: Pattern Strength & Weak Areas */}
-          <motion.div variants={staggerItem} className="xl:col-span-1">
-            <PatternStrengthCard />
+          {/* Row 2: Time Performance & Weak Areas */}
+          <motion.div
+            variants={staggerItem}
+            className="xl:col-span-1"
+          >
+            <motion.div
+              variants={cardHoverVariants}
+              initial="rest"
+              whileHover="hover"
+              whileTap={{ scale: 0.98 }}
+              className="cursor-pointer"
+            >
+              <TimePerformanceCard />
+            </motion.div>
           </motion.div>
-          <motion.div variants={staggerItem} className="xl:col-span-1">
-            <WeakAreasCard />
+          <motion.div
+            variants={staggerItem}
+            className="xl:col-span-1"
+          >
+            <motion.div
+              variants={cardHoverVariants}
+              initial="rest"
+              whileHover="hover"
+              whileTap={{ scale: 0.98 }}
+              className="cursor-pointer"
+            >
+              <WeakAreasCard />
+            </motion.div>
           </motion.div>
 
-          {/* Row 3: Time Performance & Company Readiness */}
-          <motion.div variants={staggerItem} className="xl:col-span-1">
-            <TimePerformanceCard />
+          {/* Row 3: Pattern Strength & Company Readiness */}
+          <motion.div
+            variants={staggerItem}
+            className="xl:col-span-1"
+          >
+            <motion.div
+              variants={cardHoverVariants}
+              initial="rest"
+              whileHover="hover"
+              whileTap={{ scale: 0.98 }}
+              className="cursor-pointer"
+            >
+              <PatternStrengthCard />
+            </motion.div>
           </motion.div>
-          <motion.div variants={staggerItem} className="xl:col-span-1">
-            <CompanyReadinessCard />
+          <motion.div
+            variants={staggerItem}
+            className="xl:col-span-1"
+          >
+            <motion.div
+              variants={cardHoverVariants}
+              initial="rest"
+              whileHover="hover"
+              whileTap={{ scale: 0.98 }}
+              className="cursor-pointer"
+            >
+              <CompanyReadinessCard />
+            </motion.div>
           </motion.div>
 
-          {/* Row 4: Revision Queue & Mock Interviews */}
-          <motion.div variants={staggerItem} className="xl:col-span-1">
-            <RevisionQueueCard />
-          </motion.div>
-          <motion.div variants={staggerItem} className="xl:col-span-1">
-            <MockInterviewCard />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <motion.div
+            variants={cardHoverVariants}
+            initial="rest"
+            whileHover="hover"
+            whileTap={{ scale: 0.98 }}
+            className="cursor-pointer"
+          >
+            <AnalyticsHighlightsCard />
           </motion.div>
         </motion.div>
 

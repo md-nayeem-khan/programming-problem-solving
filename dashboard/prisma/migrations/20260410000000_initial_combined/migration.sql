@@ -43,16 +43,16 @@ CREATE TABLE "submissions" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "problemId" INTEGER NOT NULL,
     "attemptNumber" INTEGER NOT NULL,
-    "timeSpentSeconds" INTEGER NOT NULL,
+    "time_spent_seconds" INTEGER NOT NULL,
     "status" TEXT NOT NULL,
     "notes" TEXT,
-    "submittedAt" DATETIME NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "submitted_at" DATETIME NOT NULL,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "attemptType" TEXT NOT NULL DEFAULT 'First',
-    "wasHintUsed" BOOLEAN NOT NULL DEFAULT false,
-    "mistakeNote" TEXT,
-    "approachNote" TEXT,
-    "patternRecognitionSeconds" INTEGER,
+    "was_hint_used" BOOLEAN NOT NULL DEFAULT false,
+    "mistake_note" TEXT,
+    "approach_note" TEXT,
+    "pattern_recognition_seconds" INTEGER,
     CONSTRAINT "submissions_problemId_fkey" FOREIGN KEY ("problemId") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -70,29 +70,35 @@ CREATE TABLE "sessions" (
 -- CreateTable
 CREATE TABLE "revisions" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "problemId" INTEGER NOT NULL,
-    "scheduledDate" DATETIME NOT NULL,
-    "completedDate" DATETIME,
-    "status" TEXT NOT NULL DEFAULT 'pending',
-    "solvedWithoutHint" BOOLEAN,
+    "submissionId" INTEGER NOT NULL,
+    "intervalLevel" INTEGER NOT NULL DEFAULT 0,
+    "nextReviewDate" DATETIME NOT NULL,
+    "completed" BOOLEAN NOT NULL DEFAULT false,
+    "completedAt" DATETIME,
+    "wasSuccessful" BOOLEAN,
     "timeSpentSeconds" INTEGER,
+    "solvedWithoutHint" BOOLEAN,
+    "confidenceLevel" INTEGER,
+    "difficultyRating" INTEGER,
     "notes" TEXT,
-    CONSTRAINT "revisions_problemId_fkey" FOREIGN KEY ("problemId") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "previousRevisionId" INTEGER,
+    CONSTRAINT "revisions_submissionId_fkey" FOREIGN KEY ("submissionId") REFERENCES "submissions" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "mock_interviews" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "problemId" INTEGER NOT NULL,
+    "problem_id" INTEGER NOT NULL,
     "date" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "timeLimit" INTEGER NOT NULL DEFAULT 2700,
-    "timeTakenSeconds" INTEGER,
+    "time_limit" INTEGER NOT NULL DEFAULT 2700,
+    "time_taken_seconds" INTEGER,
+    "pattern_recognition_seconds" INTEGER,
     "solved" BOOLEAN NOT NULL DEFAULT false,
-    "explanationScore" INTEGER,
-    "codeQualityScore" INTEGER,
-    "overallScore" INTEGER,
+    "explanation_score" INTEGER,
+    "code_quality_score" INTEGER,
+    "overall_score" REAL,
     "notes" TEXT,
-    CONSTRAINT "mock_interviews_problemId_fkey" FOREIGN KEY ("problemId") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "mock_interviews_problem_id_fkey" FOREIGN KEY ("problem_id") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -107,6 +113,44 @@ CREATE TABLE "daily_progress" (
     "updatedAt" DATETIME NOT NULL
 );
 
+-- CreateTable
+CREATE TABLE "goals" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "type" TEXT NOT NULL,
+    "targetValue" INTEGER NOT NULL,
+    "currentValue" INTEGER NOT NULL DEFAULT 0,
+    "unit" TEXT NOT NULL DEFAULT 'problems',
+    "startDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deadline" DATETIME NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'active',
+    "priority" TEXT NOT NULL DEFAULT 'medium',
+    "targetPattern" TEXT,
+    "targetCompany" TEXT,
+    "targetDifficulty" TEXT,
+    "completedAt" DATETIME,
+    "lastProgressUpdate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "milestones" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "goalId" INTEGER NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "targetValue" INTEGER NOT NULL,
+    "dueDate" DATETIME NOT NULL,
+    "completed" BOOLEAN NOT NULL DEFAULT false,
+    "completedDate" DATETIME,
+    "completionNote" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "milestones_goalId_fkey" FOREIGN KEY ("goalId") REFERENCES "goals" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 -- CreateIndex
 CREATE INDEX "problems_platform_idx" ON "problems"("platform");
 
@@ -118,6 +162,12 @@ CREATE INDEX "problems_source_idx" ON "problems"("source");
 
 -- CreateIndex
 CREATE INDEX "problems_company_idx" ON "problems"("company");
+
+-- CreateIndex
+CREATE INDEX "problems_company_source_idx" ON "problems"("company", "source");
+
+-- CreateIndex
+CREATE INDEX "problems_source_difficulty_idx" ON "problems"("source", "difficulty");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "problems_platform_problemId_key" ON "problems"("platform", "problemId");
@@ -141,13 +191,16 @@ CREATE INDEX "problem_patterns_problemId_idx" ON "problem_patterns"("problemId")
 CREATE INDEX "problem_patterns_patternId_idx" ON "problem_patterns"("patternId");
 
 -- CreateIndex
+CREATE INDEX "problem_patterns_patternId_problemId_idx" ON "problem_patterns"("patternId", "problemId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "problem_patterns_problemId_patternId_key" ON "problem_patterns"("problemId", "patternId");
 
 -- CreateIndex
 CREATE INDEX "submissions_problemId_idx" ON "submissions"("problemId");
 
 -- CreateIndex
-CREATE INDEX "submissions_submittedAt_idx" ON "submissions"("submittedAt");
+CREATE INDEX "submissions_submitted_at_idx" ON "submissions"("submitted_at");
 
 -- CreateIndex
 CREATE INDEX "submissions_status_idx" ON "submissions"("status");
@@ -156,28 +209,62 @@ CREATE INDEX "submissions_status_idx" ON "submissions"("status");
 CREATE INDEX "submissions_attemptType_idx" ON "submissions"("attemptType");
 
 -- CreateIndex
+CREATE INDEX "submissions_pattern_recognition_seconds_idx" ON "submissions"("pattern_recognition_seconds");
+
+-- CreateIndex
+CREATE INDEX "submissions_submitted_at_status_idx" ON "submissions"("submitted_at", "status");
+
+-- CreateIndex
+CREATE INDEX "submissions_problemId_status_submitted_at_idx" ON "submissions"("problemId", "status", "submitted_at");
+
+-- CreateIndex
 CREATE INDEX "sessions_problemId_idx" ON "sessions"("problemId");
 
 -- CreateIndex
 CREATE INDEX "sessions_startedAt_idx" ON "sessions"("startedAt");
 
 -- CreateIndex
-CREATE INDEX "revisions_scheduledDate_idx" ON "revisions"("scheduledDate");
+CREATE INDEX "revisions_nextReviewDate_idx" ON "revisions"("nextReviewDate");
 
 -- CreateIndex
-CREATE INDEX "revisions_status_idx" ON "revisions"("status");
+CREATE INDEX "revisions_completed_idx" ON "revisions"("completed");
 
 -- CreateIndex
-CREATE INDEX "revisions_problemId_idx" ON "revisions"("problemId");
+CREATE INDEX "revisions_submissionId_idx" ON "revisions"("submissionId");
 
 -- CreateIndex
 CREATE INDEX "mock_interviews_date_idx" ON "mock_interviews"("date");
 
 -- CreateIndex
-CREATE INDEX "mock_interviews_problemId_idx" ON "mock_interviews"("problemId");
+CREATE INDEX "mock_interviews_problem_id_idx" ON "mock_interviews"("problem_id");
+
+-- CreateIndex
+CREATE INDEX "mock_interviews_overall_score_date_idx" ON "mock_interviews"("overall_score", "date");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "daily_progress_date_key" ON "daily_progress"("date");
 
 -- CreateIndex
 CREATE INDEX "daily_progress_date_idx" ON "daily_progress"("date");
+
+-- CreateIndex
+CREATE INDEX "goals_status_idx" ON "goals"("status");
+
+-- CreateIndex
+CREATE INDEX "goals_deadline_idx" ON "goals"("deadline");
+
+-- CreateIndex
+CREATE INDEX "goals_priority_status_idx" ON "goals"("priority", "status");
+
+-- CreateIndex
+CREATE INDEX "goals_type_idx" ON "goals"("type");
+
+-- CreateIndex
+CREATE INDEX "milestones_goalId_idx" ON "milestones"("goalId");
+
+-- CreateIndex
+CREATE INDEX "milestones_dueDate_idx" ON "milestones"("dueDate");
+
+-- CreateIndex
+CREATE INDEX "milestones_completed_idx" ON "milestones"("completed");
+

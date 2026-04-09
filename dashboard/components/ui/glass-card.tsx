@@ -62,9 +62,6 @@ const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
         variants={hover ? cardHover : undefined}
         initial={hover ? "rest" : undefined}
         whileHover={hover ? "hover" : undefined}
-        style={{
-          transformStyle: "preserve-3d",
-        }}
         {...props}
       >
         {/* Animated Background Gradient */}

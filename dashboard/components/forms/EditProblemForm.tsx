@@ -30,6 +30,7 @@ interface ProblemForEdit {
   url?: string;
   notes?: string;
   company?: string;
+  tags?: string[];
   patterns: { id: number; name: string; category: string }[];
 }
 
@@ -93,6 +94,24 @@ const companies = [
   "Nvidia",
 ];
 
+const tags = [
+  "Array",
+  "String",
+  "Hash Map",
+  "Binary Search",
+  "Dynamic Programming",
+  "Greedy",
+  "Backtracking",
+  "Graph",
+  "Tree",
+  "Heap",
+  "Stack",
+  "Queue",
+  "Linked List",
+  "Math",
+  "Bit Manipulation",
+];
+
 const formatDifficultyForSelect = (difficulty?: string) => {
   if (!difficulty) return "";
   const lower = difficulty.toLowerCase();
@@ -113,6 +132,7 @@ export function EditProblemForm({
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    tag: "",
     difficulty: "",
     pattern: "",
     company: "",
@@ -142,6 +162,7 @@ export function EditProblemForm({
     setFormData({
       title: problem.title || "",
       description: problem.notes || "",
+      tag: problem.tags?.[0] || "",
       difficulty: formatDifficultyForSelect(problem.difficulty),
       pattern: problem.patterns[0]?.name || "",
       company: problem.company || "",
@@ -187,6 +208,7 @@ export function EditProblemForm({
           notes: formData.description || null,
           source: formData.company ? "Company" : "NeetCode",
           company: formData.company || null,
+          tags: formData.tag.trim() ? [formData.tag.trim()] : [],
           patterns: selectedPatternId ? [selectedPatternId] : [],
         }),
       });
@@ -348,7 +370,32 @@ export function EditProblemForm({
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="tag" className="text-sm font-medium text-foreground">
+                        Tag
+                      </Label>
+                      <Select
+                        value={formData.tag || "none"}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({ ...prev, tag: value === "none" ? "" : value }))
+                        }
+                      >
+                        <SelectTrigger className="h-10 w-full !border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400">
+                          <SelectValue placeholder="Choose tag" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Tag</SelectItem>
+                          {tags.map((tag) => (
+                            <SelectItem key={tag} value={tag}>
+                              {tag}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
                     <Label htmlFor="url" className="text-sm font-medium text-foreground">
                       Problem URL *
                     </Label>
@@ -361,6 +408,7 @@ export function EditProblemForm({
                       className="h-10 !border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400"
                       required
                     />
+                    </div>
                   </div>
                 </motion.div>
 

@@ -6,16 +6,23 @@ import { prisma } from '@/lib/prisma'
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const platform = searchParams.get('platform')
-    const difficulty = searchParams.get('difficulty')
-    const pattern = searchParams.get('pattern')
-    const tag = searchParams.get('tag')
-    const search = searchParams.get('search')
+    const normalizeFilter = (value: string | null) => {
+      if (!value) return null
+      const trimmed = value.trim()
+      if (!trimmed || trimmed.toLowerCase() === 'all') return null
+      return trimmed
+    }
+
+    const platform = normalizeFilter(searchParams.get('platform'))
+    const difficulty = normalizeFilter(searchParams.get('difficulty'))
+    const pattern = normalizeFilter(searchParams.get('pattern'))
+    const tag = normalizeFilter(searchParams.get('tag'))
+    const search = normalizeFilter(searchParams.get('search'))
     const limit = searchParams.get('limit')
     
     // NEW FILTERS
-    const source = searchParams.get('source')
-    const company = searchParams.get('company')
+    const source = normalizeFilter(searchParams.get('source'))
+    const company = normalizeFilter(searchParams.get('company'))
 
     const where: any = {}
 
@@ -27,6 +34,25 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { title: { contains: search } },
         { problemId: { contains: search } },
+        { platform: { contains: search } },
+        { company: { contains: search } },
+        { source: { contains: search } },
+        {
+          tags: {
+            some: {
+              tag: { contains: search },
+            },
+          },
+        },
+        {
+          patterns: {
+            some: {
+              pattern: {
+                name: { contains: search },
+              },
+            },
+          },
+        },
       ]
     }
     if (tag) {
@@ -64,7 +90,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { updatedAt: 'desc' },
-      ...(limit ? { take: parseInt(limit) } : {}),
+      ...(limit && !isNaN(parseInt(limit)) ? { take: parseInt(limit) } : {}),
     })
 
     const formattedProblems = problems.map((problem) => ({

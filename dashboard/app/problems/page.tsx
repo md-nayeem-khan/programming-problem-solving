@@ -87,12 +87,13 @@ interface Filters {
   search: string;
   difficulty: string;
   pattern: string;
+  tag: string;
   company: string;
   status: string;
 }
 
 // Constants
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 700;
 const TITLE_CLIP_LENGTH = 50;
 
 const COMPANIES = [
@@ -120,6 +121,24 @@ const PATTERNS = [
   "Math & Geometry",
   "Bit Manipulation",
   "Tries",
+];
+
+const TAGS = [
+  "Array",
+  "String",
+  "Hash Map",
+  "Binary Search",
+  "Dynamic Programming",
+  "Greedy",
+  "Backtracking",
+  "Graph",
+  "Tree",
+  "Heap",
+  "Stack",
+  "Queue",
+  "Linked List",
+  "Math",
+  "Bit Manipulation",
 ];
 
 // Animation Variants
@@ -257,16 +276,6 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
           ? "Try adjusting your filters to find what you're looking for."
           : "Start your interview prep journey by adding your first problem!"}
       </p>
-      {!hasFilters && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mt-6"
-        >
-          <AddProblemForm />
-        </motion.div>
-      )}
     </motion.div>
   );
 }
@@ -306,9 +315,38 @@ export default function ProblemsPage() {
     search: "",
     difficulty: "",
     pattern: "",
+    tag: "",
     company: "",
     status: "",
   });
+
+  useEffect(() => {
+    const applySearchFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const search = (params.get("search") || "").trim();
+      setFilters((prev) => {
+        if (prev.search === search) {
+          return prev;
+        }
+        return { ...prev, search };
+      });
+    };
+
+    const onHeaderSearch = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      const value = (customEvent.detail || "").trim();
+      setFilters((prev) => ({ ...prev, search: value }));
+    };
+
+    applySearchFromUrl();
+    window.addEventListener("headerSearch", onHeaderSearch as EventListener);
+    window.addEventListener("popstate", applySearchFromUrl);
+
+    return () => {
+      window.removeEventListener("headerSearch", onHeaderSearch as EventListener);
+      window.removeEventListener("popstate", applySearchFromUrl);
+    };
+  }, []);
 
   // Fetch problems from API
   const fetchProblems = useCallback(async () => {
@@ -320,6 +358,7 @@ export default function ProblemsPage() {
       if (filters.search) params.append("search", filters.search);
       if (filters.difficulty) params.append("difficulty", filters.difficulty);
       if (filters.pattern) params.append("pattern", filters.pattern);
+      if (filters.tag) params.append("tag", filters.tag);
       if (filters.company) params.append("company", filters.company);
 
       const response = await fetch(`/api/problems?${params.toString()}`);
@@ -332,7 +371,7 @@ export default function ProblemsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters.search, filters.difficulty, filters.pattern, filters.company]);
+  }, [filters.search, filters.difficulty, filters.pattern, filters.tag, filters.company]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(fetchProblems, 300);
@@ -375,9 +414,11 @@ export default function ProblemsPage() {
       search: "",
       difficulty: "",
       pattern: "",
+      tag: "",
       company: "",
       status: "",
     });
+    router.replace("/problems");
   };
 
   const hasActiveFilters = Object.values(filters).some((v) => v !== "");
@@ -544,8 +585,8 @@ export default function ProblemsPage() {
               {/* Difficulty Select */}
               <div className="flex-1">
                 <Select
-                  value={filters.difficulty}
-                  onValueChange={(value) => updateFilter("difficulty", value)}
+                  value={filters.difficulty || "all"}
+                  onValueChange={(value) => updateFilter("difficulty", value === "all" ? "" : value)}
                 >
                   <SelectTrigger className="w-full bg-white/70 dark:bg-gray-900/50 border-purple-200 dark:border-purple-800/50">
                     <SelectValue placeholder="Difficulty" />
@@ -577,8 +618,8 @@ export default function ProblemsPage() {
               {/* Pattern Select */}
               <div className="flex-1">
                 <Select
-                  value={filters.pattern}
-                  onValueChange={(value) => updateFilter("pattern", value)}
+                  value={filters.pattern || "all"}
+                  onValueChange={(value) => updateFilter("pattern", value === "all" ? "" : value)}
                 >
                   <SelectTrigger className="w-full bg-white/70 dark:bg-gray-900/50 border-purple-200 dark:border-purple-800/50">
                     <SelectValue placeholder="Pattern" />
@@ -597,8 +638,8 @@ export default function ProblemsPage() {
               {/* Company Select */}
               <div className="flex-1">
                 <Select
-                  value={filters.company}
-                  onValueChange={(value) => updateFilter("company", value)}
+                  value={filters.company || "all"}
+                  onValueChange={(value) => updateFilter("company", value === "all" ? "" : value)}
                 >
                   <SelectTrigger className="w-full bg-white/70 dark:bg-gray-900/50 border-purple-200 dark:border-purple-800/50">
                     <SelectValue placeholder="Company" />
@@ -614,11 +655,31 @@ export default function ProblemsPage() {
                 </Select>
               </div>
 
+              {/* Tag Select */}
+              <div className="flex-1">
+                <Select
+                  value={filters.tag || "all"}
+                  onValueChange={(value) => updateFilter("tag", value === "all" ? "" : value)}
+                >
+                  <SelectTrigger className="w-full bg-white/70 dark:bg-gray-900/50 border-purple-200 dark:border-purple-800/50">
+                    <SelectValue placeholder="Tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tags</SelectItem>
+                    {TAGS.map((tag) => (
+                      <SelectItem key={tag} value={tag}>
+                        {tag}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Status Select */}
               <div className="flex-1">
                 <Select
-                  value={filters.status}
-                  onValueChange={(value) => updateFilter("status", value)}
+                  value={filters.status || "all"}
+                  onValueChange={(value) => updateFilter("status", value === "all" ? "" : value)}
                 >
                   <SelectTrigger className="w-full bg-white/70 dark:bg-gray-900/50 border-purple-200 dark:border-purple-800/50">
                     <SelectValue placeholder="Status" />
@@ -644,6 +705,15 @@ export default function ProblemsPage() {
 
             {/* Clear Filter Button */}
             <div className="flex flex-wrap items-center gap-4 mt-4">
+              {filters.search && (
+                <Badge
+                  variant="secondary"
+                  className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                >
+                  Header Search: "{filters.search}"
+                </Badge>
+              )}
+
               {hasActiveFilters && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}

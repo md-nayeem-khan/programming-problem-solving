@@ -589,22 +589,22 @@ export default function GoalsPage() {
       </motion.div>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as GoalFilter)}>
-        <TabsList className="grid w-full max-w-md grid-cols-3 bg-white/60 backdrop-blur-xl">
+        <TabsList className="grid w-fit grid-cols-3 bg-white/60 backdrop-blur-xl justify-start">
           <TabsTrigger
             value="active"
-            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
+            className="justify-start px-4 data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Active
           </TabsTrigger>
           <TabsTrigger
             value="completed"
-            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
+            className="justify-start px-4 data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Completed
           </TabsTrigger>
           <TabsTrigger
             value="all"
-            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
+            className="justify-start px-4 data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             All
           </TabsTrigger>

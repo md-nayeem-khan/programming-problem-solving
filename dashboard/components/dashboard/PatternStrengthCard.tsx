@@ -178,7 +178,13 @@ export function PatternStrengthCard() {
       animate="visible"
       className="group"
     >
-      <GlassCard variant="default" className="min-h-[400px] bg-white/80" hover={true}>
+      <GlassCard
+        variant="default"
+        className="dashboard-card dashboard-card-teal dashboard-soft-grid group min-h-[400px] border-emerald-200/60 shadow-xl shadow-emerald-500/20"
+        hover={true}
+      >
+        <div className="pointer-events-none absolute -top-10 -right-8 h-24 w-24 rounded-full bg-emerald-400/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
         {/* Header */}
         <CardHeader className="relative pb-4">
           <motion.div
@@ -232,14 +238,14 @@ export function PatternStrengthCard() {
                     className="relative p-4 rounded-xl transition-all duration-300"
                     style={{
                       background: isHovered 
-                        ? "rgba(255, 255, 255, 0.1)" 
-                        : "rgba(255, 255, 255, 0.05)",
+                        ? "rgba(255, 255, 255, 0.55)" 
+                        : "rgba(255, 255, 255, 0.32)",
                       backdropFilter: isHovered ? "blur(10px)" : "blur(5px)",
                       border: isHovered 
-                        ? "1px solid rgba(255, 255, 255, 0.2)" 
-                        : "1px solid rgba(255, 255, 255, 0.1)",
+                        ? "1px solid rgba(16, 185, 129, 0.35)" 
+                        : "1px solid rgba(255, 255, 255, 0.45)",
                     }}
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
                     transition={{ duration: 0.2 }}
                   >
                     {/* Header */}

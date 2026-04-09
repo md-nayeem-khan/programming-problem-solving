@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, Clock, Flame, CheckCircle2, AlertCircle, Trophy, Target, Zap, Award, Star } from "lucide-react";
-import { fadeInUp, springBounce, streakFlame, goalCelebration, achievementBadge } from "@/lib/animations";
+import { Calendar, Clock, CheckCircle2, AlertCircle, Target, Award, Star } from "lucide-react";
+import { fadeInUp, springBounce, goalCelebration, achievementBadge } from "@/lib/animations";
 import { GlassCard } from "@/components/ui/glass-card";
 import { AnimatedCounter, CountUpStats } from "@/components/ui/animated-counter";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -14,8 +14,6 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 interface DailyProgressData {
   problemsSolved: number;
   timeSpentHours: number;
-  streak: number;
-  longestStreak: number;
   dailyGoal: number;
 }
 
@@ -37,7 +35,7 @@ export function DailyProgressCard() {
           throw new Error("Failed to fetch daily progress");
         }
 
-        const stats = await statsRes.json();
+        await statsRes.json();
         const streak = await streakRes.json();
 
         const today = new Date().toISOString().split("T")[0];
@@ -48,8 +46,6 @@ export function DailyProgressCard() {
         const progressData = {
           problemsSolved: todayActivity?.count || 0,
           timeSpentHours: todayActivity?.totalTime ? todayActivity.totalTime / 3600 : 0,
-          streak: streak.currentStreak || 0,
-          longestStreak: streak.longestStreak || 0,
           dailyGoal: 2,
         };
 
@@ -108,8 +104,6 @@ export function DailyProgressCard() {
 
   const goalProgress = (data.problemsSolved / data.dailyGoal) * 100;
   const goalMet = data.problemsSolved >= data.dailyGoal;
-  const isOnFire = data.streak >= 7; // On fire if streak is 7+ days
-  const isNewRecord = data.streak === data.longestStreak && data.streak > 0;
 
   return (
     <motion.div
@@ -118,7 +112,14 @@ export function DailyProgressCard() {
       animate="visible"
       className="group relative"
     >
-      <GlassCard variant="default" className="min-h-[400px] bg-white/80 overflow-hidden" hover={true}>
+      <GlassCard
+        variant="default"
+        className="dashboard-card dashboard-card-sky dashboard-soft-grid group min-h-[400px] border-blue-200/60 shadow-xl shadow-blue-500/20 overflow-hidden"
+        hover={true}
+      >
+        <div className="pointer-events-none absolute -top-10 -right-8 h-24 w-24 rounded-full bg-cyan-400/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="pointer-events-none absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-blue-400/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
         {/* Header */}
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-3 text-xl font-bold">
@@ -156,7 +157,8 @@ export function DailyProgressCard() {
                     value={data.problemsSolved}
                     duration={1.2}
                     delay={0.8}
-                    gradient={true}
+                    gradient={false}
+                    className="text-gradient-blue-cyan"
                     size="lg"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -178,16 +180,11 @@ export function DailyProgressCard() {
               }}
               className="mt-4"
             >
-              {goalMet ? (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-green-emerald text-white font-bold shadow-glow-green">
+              {goalMet && (
+                <div className="dashboard-metric-pill flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-green-emerald text-white font-bold shadow-glow-green border-green-100/40">
                   <CheckCircle2 className="h-4 w-4" />
                   Goal Achieved!
                   <Star className="h-4 w-4" />
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-electric-blue/20 text-electric-blue border-2 border-electric-blue/30">
-                  <Target className="h-4 w-4" />
-                  {data.dailyGoal - data.problemsSolved} more to go
                 </div>
               )}
             </motion.div>
@@ -206,13 +203,13 @@ export function DailyProgressCard() {
                   value: data.timeSpentHours,
                   suffix: "h",
                   decimal: 1,
-                  color: "blue"
+                  color: "blueGradient"
                 },
                 {
                   label: "Completion Rate",
                   value: goalProgress,
                   suffix: "%",
-                  color: "purple"
+                  color: "blueGradient"
                 }
               ]}
               className="grid-cols-2"
@@ -220,99 +217,6 @@ export function DailyProgressCard() {
             />
           </motion.div>
 
-          {/* Streak Display */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.8 }}
-            className="relative"
-          >
-            <GlassCard 
-              variant={isOnFire ? "orange" : "default"} 
-              size="sm" 
-              className={`${isOnFire ? 'shadow-glow-orange border-sunset-orange/40' : 'border-white/30'} overflow-hidden`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <motion.div
-                    variants={isOnFire ? streakFlame : undefined}
-                    initial="idle"
-                    animate={isOnFire ? "burning" : "idle"}
-                    className="relative"
-                  >
-                    <Flame 
-                      className={`h-10 w-10 ${isOnFire ? 'text-sunset-orange' : 'text-muted-foreground'}`}
-                    />
-                    {isOnFire && (
-                      <motion.div
-                        className="absolute inset-0 rounded-full bg-sunset-orange/20"
-                        animate={{ scale: [1, 1.4, 1], opacity: [0.5, 0, 0.5] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                      />
-                    )}
-                  </motion.div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <AnimatedCounter
-                        value={data.streak}
-                        duration={1}
-                        delay={2}
-                        className={`text-2xl font-bold ${isOnFire ? 'text-sunset-orange' : 'text-foreground'}`}
-                      />
-                      <span className={`text-2xl font-bold ${isOnFire ? 'text-sunset-orange' : 'text-foreground'}`}>
-                        Days
-                      </span>
-                      {isOnFire && <Zap className="h-5 w-5 text-sunset-orange" />}
-                    </div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      Current Streak
-                      {isNewRecord && (
-                        <motion.span
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: "spring", stiffness: 500, delay: 2.5 }}
-                          className="text-golden-yellow"
-                        >
-                          🏆 New Record!
-                        </motion.span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1">
-                    <Trophy className="h-4 w-4 text-golden-yellow" />
-                    <AnimatedCounter
-                      value={data.longestStreak}
-                      duration={0.8}
-                      delay={2.2}
-                      className="text-lg font-bold text-golden-yellow"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Best Streak</p>
-                </div>
-              </div>
-            </GlassCard>
-          </motion.div>
-
-          {/* Streak Status Messages */}
-          <AnimatePresence>
-            {isOnFire && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ delay: 2.8 }}
-                className="text-center"
-              >
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-orange-red text-white text-sm font-semibold shadow-glow-orange">
-                  <Flame className="h-4 w-4" />
-                  You're on fire! 🔥
-                  <Zap className="h-4 w-4" />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </CardContent>
 
         {/* Goal Celebration Overlay */}

@@ -74,12 +74,31 @@ const companies = [
   "Stripe", "Coinbase", "ByteDance", "Nvidia"
 ];
 
+const tags = [
+  "Array",
+  "String",
+  "Hash Map",
+  "Binary Search",
+  "Dynamic Programming",
+  "Greedy",
+  "Backtracking",
+  "Graph",
+  "Tree",
+  "Heap",
+  "Stack",
+  "Queue",
+  "Linked List",
+  "Math",
+  "Bit Manipulation",
+];
+
 export function AddProblemForm({ onSuccess }: AddProblemFormProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    tag: "",
     difficulty: "",
     pattern: "",
     company: "",
@@ -105,7 +124,15 @@ export function AddProblemForm({ onSuccess }: AddProblemFormProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          title: formData.title,
+          description: formData.description,
+          difficulty: formData.difficulty,
+          pattern: formData.pattern,
+          company: formData.company,
+          platform: formData.platform,
+          url: formData.url,
+          problemId: formData.problemId,
+          tags: formData.tag.trim() ? [formData.tag.trim()] : [],
           source: formData.company ? "Company" : "NeetCode",
         }),
       });
@@ -122,7 +149,7 @@ export function AddProblemForm({ onSuccess }: AddProblemFormProps) {
       
       setOpen(false);
       setFormData({
-        title: "", description: "", difficulty: "", 
+        title: "", description: "", tag: "", difficulty: "", 
         pattern: "", company: "", platform: "", url: "", problemId: ""
       });
       onSuccess?.();
@@ -293,8 +320,33 @@ export function AddProblemForm({ onSuccess }: AddProblemFormProps) {
                     </div>
                   </div>
 
-                  {/* Row 4: Problem URL - Full Width */}
-                  <div className="space-y-2">
+                  {/* Row 4: Tag & Problem URL */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="tag" className="text-sm font-medium text-foreground">
+                        Tag
+                      </Label>
+                      <Select
+                        value={formData.tag || "none"}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({ ...prev, tag: value === "none" ? "" : value }))
+                        }
+                      >
+                        <SelectTrigger className="h-10 w-full !border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400">
+                          <SelectValue placeholder="Choose tag" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Tag</SelectItem>
+                          {tags.map((tag) => (
+                            <SelectItem key={tag} value={tag}>
+                              {tag}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
                     <Label htmlFor="url" className="text-sm font-medium text-foreground">
                       Problem URL *
                     </Label>
@@ -307,6 +359,7 @@ export function AddProblemForm({ onSuccess }: AddProblemFormProps) {
                       className="h-10 !border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400"
                       required
                     />
+                    </div>
                   </div>
                 </motion.div>
 

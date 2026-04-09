@@ -6,6 +6,14 @@ export async function GET() {
   try {
     const totalProblems = await prisma.problem.count()
     const timeResult = await prisma.submission.aggregate({ _sum: { timeSpentSeconds: true } })
+    const totalSolvedSubmissions = await prisma.submission.count({
+      where: { status: 'solved' }
+    })
+    const solvedProblemIds = await prisma.submission.findMany({
+      where: { status: 'solved' },
+      select: { problemId: true },
+      distinct: ['problemId']
+    })
     
     // Get problem counts by difficulty
     const byDifficulty = await prisma.problem.groupBy({ by: ['difficulty'], _count: true })
@@ -49,6 +57,8 @@ export async function GET() {
     
     return NextResponse.json({
       totalProblems,
+      totalSolvedSubmissions,
+      totalProblemsSolvedUnique: solvedProblemIds.length,
       totalTimeSeconds: timeResult._sum.timeSpentSeconds || 0,
       totalTimeMinutes: Math.round((timeResult._sum.timeSpentSeconds || 0) / 60),
       

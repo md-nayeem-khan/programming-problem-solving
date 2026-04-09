@@ -90,7 +90,7 @@ interface CountUpStatsProps {
     prefix?: string;
     suffix?: string;
     decimal?: number;
-    color?: "purple" | "blue" | "green" | "orange";
+    color?: "purple" | "blue" | "green" | "orange" | "blueGradient";
   }>;
   className?: string;
   staggerDelay?: number;
@@ -102,6 +102,7 @@ export function CountUpStats({ stats, className, staggerDelay = 0.1 }: CountUpSt
     blue: "text-electric-blue",
     green: "text-vibrant-green",
     orange: "text-sunset-orange",
+    blueGradient: "text-gradient-blue-cyan",
   };
 
   return (

@@ -161,29 +161,39 @@ export default function CompanyPage() {
         }
         
         const data = await response.json();
+        const apiCompanies = Array.isArray(data.companies) ? data.companies : [];
         
-        // Transform API data to match our component structure
-        const companyStats: CompanyStat[] = COMPANIES.map((company) => {
-          const apiData = data.companies?.find((c: any) => 
-            c.company.toLowerCase() === company.name.toLowerCase()
+        // Use real API-backed values only (no random fallback), so empty DB shows empty state.
+        const companyStats: CompanyStat[] = apiCompanies
+          .filter((company: any) => typeof company?.company === "string" && company.company.trim().length > 0)
+          .map((company: any) => {
+            const readinessScore = Number(company?.readinessScore ?? company?.readiness ?? 0);
+
+            return {
+              company: company.company,
+              solved: Number(company?.problemsSolved ?? 0),
+              readiness: company?.isReady
+                ? "Ready"
+                : readinessScore > 0.5
+                  ? "Almost Ready"
+                  : "Not Ready",
+              topPatterns: Array.isArray(company?.topPatterns)
+                ? company.topPatterns.filter((pattern: unknown) => typeof pattern === "string")
+                : [],
+              avgTime: company?.avgTimeSeconds ? Math.round(company.avgTimeSeconds / 60) : 0,
+              difficulty: {
+                easy: Number(company?.difficulty?.easy ?? 0),
+                medium: Number(company?.difficulty?.medium ?? 0),
+                hard: Number(company?.difficulty?.hard ?? 0),
+              },
+            };
+          })
+          .filter((company) =>
+            company.solved > 0 ||
+            company.avgTime > 0 ||
+            company.topPatterns.length > 0 ||
+            company.difficulty.easy + company.difficulty.medium + company.difficulty.hard > 0
           );
-          
-          return {
-            company: company.name,
-            solved: apiData?.problemsSolved || 0,
-            readiness: apiData?.isReady ? "Ready" : 
-              (apiData?.readinessScore && apiData.readinessScore > 0.5 ? "Almost Ready" : "Not Ready"),
-            topPatterns: apiData?.topPatterns || [
-              "Arrays", "Dynamic Programming", "Trees"
-            ].slice(0, Math.floor(Math.random() * 3) + 1),
-            avgTime: apiData?.avgTimeSeconds ? Math.round(apiData.avgTimeSeconds / 60) : Math.floor(Math.random() * 20) + 25,
-            difficulty: apiData?.difficulty || {
-              easy: Math.floor(Math.random() * 20) + 5,
-              medium: Math.floor(Math.random() * 20) + 10,
-              hard: Math.floor(Math.random() * 10) + 2,
-            },
-          };
-        });
         
         setStats(companyStats);
       } catch (err) {
@@ -351,19 +361,45 @@ export default function CompanyPage() {
         </div>
       </motion.div>
 
-      {/* Company Grid */}
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        {COMPANIES.map((company, index) => {
-          const companyStat = stats.find(s => s.company === company.name);
-          const readinessPercentage = companyStat ? 
-            Math.round((companyStat.solved / company.targetProblems) * 100) : 0;
-          
-          return (
+      {stats.length === 0 ? (
+        <motion.div
+          variants={scaleIn}
+          initial="hidden"
+          animate="visible"
+          className="text-center py-16 rounded-xl border border-dashed border-border bg-muted/20"
+        >
+          <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">No Company Data Yet</h2>
+          <p className="text-muted-foreground max-w-xl mx-auto">
+            Company cards will appear after you solve company-tagged problems.
+          </p>
+        </motion.div>
+      ) : (
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          {stats.map((companyStat) => {
+            const company = COMPANIES.find((item) =>
+              item.name.toLowerCase() === companyStat.company.toLowerCase()
+            ) || {
+              name: companyStat.company,
+              icon: "🏢",
+              colors: {
+                from: "gray-500",
+                to: "slate-500",
+                text: "gray-700",
+                bg: "gray-50",
+                border: "gray-200",
+              },
+              targetProblems: 100,
+            };
+
+            const readinessPercentage = Math.round((companyStat.solved / company.targetProblems) * 100);
+
+            return (
             <motion.div
               key={company.name}
               variants={gridItemVariants}
@@ -395,8 +431,8 @@ export default function CompanyPage() {
                         </div>
                       </div>
                       <Badge className={`${companyStat ? getReadinessColor(companyStat.readiness) : 'bg-gray-100 text-gray-600'} text-xs font-medium`}>
-                        {companyStat ? getReadinessIcon(companyStat.readiness) : "⚫"} 
-                        {companyStat?.readiness || "No Data"}
+                        {getReadinessIcon(companyStat.readiness)} 
+                        {companyStat.readiness}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -407,7 +443,7 @@ export default function CompanyPage() {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground font-medium">Progress</span>
                         <span className="font-bold text-foreground">
-                          {companyStat?.solved || 0}/{company.targetProblems}
+                          {companyStat.solved}/{company.targetProblems}
                         </span>
                       </div>
                       <div className="relative h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
@@ -428,27 +464,25 @@ export default function CompanyPage() {
                     </div>
                     
                     {/* Stats Grid */}
-                    {companyStat && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="text-center p-3 rounded-lg bg-white/50 dark:bg-gray-900/30 border border-white/20 dark:border-gray-800/20">
-                          <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                            <Clock className="h-3 w-3" />
-                          </div>
-                          <p className="text-lg font-bold text-foreground">{companyStat.avgTime}m</p>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Avg Time</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-3 rounded-lg bg-white/50 dark:bg-gray-900/30 border border-white/20 dark:border-gray-800/20">
+                        <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                          <Clock className="h-3 w-3" />
                         </div>
-                        <div className="text-center p-3 rounded-lg bg-white/50 dark:bg-gray-900/30 border border-white/20 dark:border-gray-800/20">
-                          <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                            <Target className="h-3 w-3" />
-                          </div>
-                          <p className="text-lg font-bold text-foreground">{companyStat.difficulty.easy + companyStat.difficulty.medium + companyStat.difficulty.hard}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Solved</p>
-                        </div>
+                        <p className="text-lg font-bold text-foreground">{companyStat.avgTime}m</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Avg Time</p>
                       </div>
-                    )}
+                      <div className="text-center p-3 rounded-lg bg-white/50 dark:bg-gray-900/30 border border-white/20 dark:border-gray-800/20">
+                        <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                          <Target className="h-3 w-3" />
+                        </div>
+                        <p className="text-lg font-bold text-foreground">{companyStat.difficulty.easy + companyStat.difficulty.medium + companyStat.difficulty.hard}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Solved</p>
+                      </div>
+                    </div>
                     
                     {/* Top Patterns */}
-                    {companyStat?.topPatterns && (
+                    {companyStat.topPatterns.length > 0 && (
                       <div>
                         <span className="text-sm font-medium text-muted-foreground">Top Patterns:</span>
                         <div className="flex flex-wrap gap-1 mt-2">
@@ -469,7 +503,7 @@ export default function CompanyPage() {
                     <Button
                       size="sm"
                       className={`w-full bg-gradient-to-r from-${company.colors.from} to-${company.colors.to} hover:from-${company.colors.from} hover:to-${company.colors.to} text-white shadow-lg hover:shadow-xl transition-all duration-200 opacity-0 group-hover:opacity-100 mt-2`}
-                      onClick={() => router.push(`/problems?company=${company.name.toLowerCase()}`)}
+                      onClick={() => router.push(`/problems?company=${companyStat.company.toLowerCase()}`)}
                     >
                       <ExternalLink className="h-3 w-3 mr-2" />
                       View Problems
@@ -478,9 +512,10 @@ export default function CompanyPage() {
                 </Card>
               </motion.div>
             </motion.div>
-          );
-        })}
-      </motion.div>
+            );
+          })}
+        </motion.div>
+      )}
     </div>
   );
 }

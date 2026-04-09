@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, User, Settings, LogOut } from "lucide-react";
+import { User, Settings, LogOut, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/enhanced-input";
 import {
@@ -12,15 +12,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { EnhancedTooltip } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
 import { fadeInUp, buttonRipple } from "@/lib/animations";
+import { usePathname, useRouter } from "next/navigation";
+
+interface QuickSearchResult {
+  id: number;
+  title: string;
+  problemId: string;
+  platform: string;
+  company?: string;
+  difficulty: string;
+  patterns: { id: number; name: string; category: string }[];
+}
 
 export function Navbar() {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [quickResults, setQuickResults] = useState<QuickSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,6 +45,99 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (pathname !== "/problems") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const queryFromUrl = (params.get("search") || "").trim();
+    setSearchQuery(queryFromUrl);
+    setDebouncedSearch(queryFromUrl);
+  }, [pathname]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const shouldSearch = debouncedSearch.length >= 2;
+    if (!shouldSearch) {
+      setQuickResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    let isActive = true;
+
+    async function fetchQuickResults() {
+      try {
+        setIsSearching(true);
+        const response = await fetch(
+          `/api/problems?search=${encodeURIComponent(debouncedSearch)}&limit=6`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to search problems");
+        }
+
+        const data = await response.json();
+        if (isActive) {
+          setQuickResults(Array.isArray(data.problems) ? data.problems : []);
+        }
+      } catch (error) {
+        console.error("Navbar quick search failed:", error);
+        if (isActive) {
+          setQuickResults([]);
+        }
+      } finally {
+        if (isActive) {
+          setIsSearching(false);
+        }
+      }
+    }
+
+    fetchQuickResults();
+
+    return () => {
+      isActive = false;
+    };
+  }, [debouncedSearch]);
+
+  const showQuickResults = searchFocused && searchQuery.trim().length > 0;
+
+  const executeSearch = (query: string) => {
+    const trimmed = query.trim();
+    window.dispatchEvent(new CustomEvent("headerSearch", { detail: trimmed }));
+
+    if (!trimmed) {
+      router.push("/problems");
+      return;
+    }
+    router.push(`/problems?search=${encodeURIComponent(trimmed)}`);
+  };
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      executeSearch(searchQuery);
+      setSearchFocused(false);
+    }
+
+    if (event.key === "Escape") {
+      setSearchFocused(false);
+    }
+  };
+
+  const handleResultClick = (problemId: number) => {
+    setSearchFocused(false);
+    router.push(`/problems/${problemId}`);
+  };
 
   return (
     <motion.header
@@ -78,6 +187,11 @@ export function Navbar() {
               size="default"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onSearchClear={() => {
+                setSearchQuery("");
+                setQuickResults([]);
+              }}
+              onKeyDown={handleSearchKeyDown}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
               className={`rounded-full border-gray-200/60 bg-gray-50/80 hover:bg-white/90 transition-all duration-300 ${
@@ -88,7 +202,7 @@ export function Navbar() {
           
           {/* Search suggestions overlay */}
           <AnimatePresence>
-            {searchQuery.length > 0 && (
+            {showQuickResults && (
               <motion.div
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -96,15 +210,46 @@ export function Navbar() {
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 className="absolute top-full left-0 right-0 mt-3 p-4 bg-white/95 backdrop-blur-xl border border-gray-200/50 rounded-2xl shadow-xl shadow-gray-200/50 z-50"
               >
-                <div className="text-xs text-muted-foreground mb-3 font-medium">Quick results for "{searchQuery}"</div>
-                <div className="space-y-1">
-                  <div className="px-3 py-2 hover:bg-gradient-to-r hover:from-electric-purple/10 hover:to-bright-pink/5 rounded-lg cursor-pointer transition-all duration-200 text-sm font-medium">
-                    Two Sum - Array Pattern
-                  </div>
-                  <div className="px-3 py-2 hover:bg-gradient-to-r hover:from-electric-purple/10 hover:to-bright-pink/5 rounded-lg cursor-pointer transition-all duration-200 text-sm font-medium">
-                    Binary Search Template
-                  </div>
+                <div className="text-xs text-muted-foreground mb-3 font-medium">
+                  Quick results for "{searchQuery.trim()}"
                 </div>
+
+                {isSearching ? (
+                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Searching...
+                  </div>
+                ) : quickResults.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    No matches found. Press Enter to search all problems.
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {quickResults.map((problem) => {
+                      const primaryPattern = problem.patterns?.[0]?.name;
+                      return (
+                        <button
+                          key={problem.id}
+                          type="button"
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            handleResultClick(problem.id);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-gradient-to-r hover:from-electric-purple/10 hover:to-bright-pink/5 rounded-lg transition-all duration-200"
+                        >
+                          <div className="text-sm font-medium text-foreground truncate">
+                            {problem.title}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {problem.platform} {problem.problemId}
+                            {problem.company ? ` • ${problem.company}` : ""}
+                            {primaryPattern ? ` • ${primaryPattern}` : ""}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

@@ -109,18 +109,21 @@ export function TimePerformanceCard() {
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
-      whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
     >
-      <Card className="bg-gradient-to-br from-indigo-100 via-violet-50 to-purple-100 dark:from-indigo-950/40 dark:via-violet-900/20 dark:to-purple-950/40 border-2 border-indigo-300 dark:border-indigo-700 overflow-hidden relative shadow-xl shadow-indigo-500/20 hover:shadow-2xl hover:shadow-indigo-500/30 transition-shadow duration-300">
+      <Card className="dashboard-card dashboard-card-violet dashboard-soft-grid group border-2 border-indigo-300/80 dark:border-indigo-700 overflow-hidden relative shadow-xl shadow-indigo-500/20 hover:shadow-2xl hover:shadow-indigo-500/35 transition-all duration-300">
         {/* Decorative gradient orbs */}
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-indigo-400/30 to-purple-400/30 rounded-full blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-tr from-purple-400/20 to-indigo-400/20 rounded-full blur-2xl" />
+        <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-indigo-400/30 to-purple-400/30 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="pointer-events-none absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-tr from-purple-400/20 to-indigo-400/20 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         
         <CardHeader className="relative">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/30">
+            <motion.div
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/30"
+              whileHover={{ rotate: 10, scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+            >
               <Timer className="h-4 w-4 text-white" />
-            </div>
+            </motion.div>
             <span className="bg-gradient-to-r from-indigo-700 to-purple-600 bg-clip-text text-transparent">
               Time Performance
             </span>
@@ -130,7 +133,7 @@ export function TimePerformanceCard() {
         <CardContent className="relative space-y-3">
           {/* Easy */}
           <motion.div
-            className={`p-4 rounded-lg border ${getDifficultyColor(stats.easy.met)}`}
+            className={`dashboard-metric-pill p-4 rounded-lg border ${getDifficultyColor(stats.easy.met)}`}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
@@ -156,7 +159,7 @@ export function TimePerformanceCard() {
 
           {/* Medium */}
           <motion.div
-            className={`p-4 rounded-lg border ${getDifficultyColor(stats.medium.met)}`}
+            className={`dashboard-metric-pill p-4 rounded-lg border ${getDifficultyColor(stats.medium.met)}`}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 }}
@@ -182,7 +185,7 @@ export function TimePerformanceCard() {
 
           {/* Hard */}
           <motion.div
-            className={`p-4 rounded-lg border ${getDifficultyColor(stats.hard.met)}`}
+            className={`dashboard-metric-pill p-4 rounded-lg border ${getDifficultyColor(stats.hard.met)}`}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
@@ -206,17 +209,6 @@ export function TimePerformanceCard() {
             </div>
           </motion.div>
 
-          {/* Summary */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="mt-4 p-3 rounded-lg bg-indigo-100/50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800"
-          >
-            <p className="text-xs text-center text-muted-foreground">
-              💡 Meeting time benchmarks indicates interview-ready speed
-            </p>
-          </motion.div>
         </CardContent>
       </Card>
     </motion.div>

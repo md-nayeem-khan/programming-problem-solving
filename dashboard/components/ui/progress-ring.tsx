@@ -34,7 +34,7 @@ const thicknessConfig = {
 const variantConfig = {
   purple: {
     background: "stroke-purple-200 dark:stroke-purple-900",
-    foreground: "stroke-electric-purple",
+    foreground: "",
     glow: "drop-shadow-[0_0_10px_hsl(var(--electric-purple))]",
     gradient: "url(#purple-gradient)",
   },
@@ -146,8 +146,8 @@ export function ProgressRing({
           r={radius}
           strokeWidth={strokeWidth}
           fill="none"
-          stroke={variant === "gradient" ? variantStyle.gradient : undefined}
-          className={variant !== "gradient" ? variantStyle.foreground : undefined}
+          stroke={variant === "gradient" || variant === "purple" ? variantStyle.gradient : undefined}
+          className={variant !== "gradient" && variant !== "purple" ? variantStyle.foreground : undefined}
           strokeLinecap="round"
           strokeDasharray={circumference}
           variants={animated ? progressRing : undefined}
@@ -165,8 +165,8 @@ export function ProgressRing({
             r={radius}
             strokeWidth={strokeWidth * 1.5}
             fill="none"
-            stroke={variant === "gradient" ? variantStyle.gradient : undefined}
-            className={variant !== "gradient" ? variantStyle.foreground : undefined}
+            stroke={variant === "gradient" || variant === "purple" ? variantStyle.gradient : undefined}
+            className={variant !== "gradient" && variant !== "purple" ? variantStyle.foreground : undefined}
             strokeLinecap="round"
             strokeDasharray={circumference}
             opacity={0.3}

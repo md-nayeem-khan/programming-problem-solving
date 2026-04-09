@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, Suspense, useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,7 +38,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         {/* Navbar - Fixed at top */}
         <div className="flex-shrink-0">
-          <Navbar />
+          <Suspense fallback={<div className="h-16 border-b border-white/10 bg-white/80" />}>
+            <Navbar />
+          </Suspense>
         </div>
 
         {/* Page Content - Scrollable */}

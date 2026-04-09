@@ -5,18 +5,15 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Target, TrendingUp, AlertCircle, Zap, Award } from "lucide-react";
-import { fadeInUp, springBounce, glowPulse } from "@/lib/animations";
+import { Target, AlertCircle, Zap, Award } from "lucide-react";
+import { fadeInUp } from "@/lib/animations";
 import { ProgressRing } from "@/components/ui/progress-ring";
-import { AnimatedCounter, CountUpStats } from "@/components/ui/animated-counter";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { GlassCard } from "@/components/ui/glass-card";
 
 interface ReadinessData {
   score: number;
   status: "Ready" | "Almost Ready" | "Not Ready";
-  totalProblems: number;
-  perfectSolves: number;
-  avgTime: number;
   tips: string[];
 }
 
@@ -36,9 +33,6 @@ export function ReadinessCard() {
           score: result.readinessScore.score,
           status: result.readinessScore.score >= 0.8 ? "Ready" : 
                   result.readinessScore.score >= 0.6 ? "Almost Ready" : "Not Ready",
-          totalProblems: result.metrics.totalProblems,
-          perfectSolves: result.readinessScore.breakdown.perfectSolves,
-          avgTime: result.metrics.avgTimeMinutes,
           tips: result.recommendations || [],
         });
       } catch (err) {
@@ -91,27 +85,27 @@ export function ReadinessCard() {
   const scorePercentage = Math.round((data.score ?? 0) * 100);
   const isReady = data.status === "Ready";
   const isAlmostReady = data.status === "Almost Ready";
-  
+  const useGradientStatusText = data.status !== "Ready";
   const statusConfig = {
     "Ready": {
       color: "text-vibrant-green",
       bgColor: "bg-vibrant-green/20 border-vibrant-green/30",
       icon: "🚀",
       glowColor: "shadow-glow-green",
-      ringVariant: "green" as const,
+      ringVariant: "purple" as const,
     },
     "Almost Ready": {
-      color: "text-golden-yellow",
-      bgColor: "bg-golden-yellow/20 border-golden-yellow/30",
+      color: "",
+      bgColor: "bg-fuchsia-100/85 border-fuchsia-300/60",
       icon: "⚡",
-      glowColor: "shadow-glow-orange",
-      ringVariant: "orange" as const,
+      glowColor: "",
+      ringVariant: "purple" as const,
     },
     "Not Ready": {
-      color: "text-coral-red",
-      bgColor: "bg-coral-red/20 border-coral-red/30", 
+      color: "",
+      bgColor: "bg-fuchsia-100/85 border-fuchsia-300/60", 
       icon: "🎯",
-      glowColor: "shadow-glow",
+      glowColor: "",
       ringVariant: "purple" as const,
     },
   };
@@ -127,9 +121,12 @@ export function ReadinessCard() {
     >
       <GlassCard 
         variant="default" 
-        className="min-h-[400px] bg-white/80 transition-all duration-300"
+        className="dashboard-card dashboard-card-violet dashboard-soft-grid group min-h-[400px] border-fuchsia-200/60 shadow-xl shadow-fuchsia-500/20 transition-all duration-300"
         hover={true}
       >
+        <div className="pointer-events-none absolute -top-10 -right-8 h-24 w-24 rounded-full bg-fuchsia-400/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="pointer-events-none absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-violet-400/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
         {/* Header */}
         <CardHeader className="relative pb-4">
           <CardTitle className="flex items-center gap-3 text-xl font-bold">
@@ -188,91 +185,14 @@ export function ReadinessCard() {
               }}
             >
               <Badge 
-                className={`${config.bgColor} ${config.color} text-base px-6 py-2 font-bold border-2 mt-6 ${config.glowColor}`}
+                className={`${config.bgColor} ${config.color} ${useGradientStatusText ? "text-sm px-4 py-1.5 font-semibold rounded-lg shadow-none" : "dashboard-metric-pill text-base px-6 py-2 font-bold"} border-2 mt-6 ${config.glowColor}`}
               >
-                <span className="mr-2 text-lg">{config.icon}</span>
-                {data.status}
+                {!useGradientStatusText && <span className="mr-2 text-lg">{config.icon}</span>}
+                {useGradientStatusText ? <span className="text-gradient-purple-pink">{data.status}</span> : data.status}
                 {isReady && <Award className="ml-2 h-4 w-4" />}
               </Badge>
             </motion.div>
           </div>
-
-          {/* Stats Grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 1.4 }}
-            className="relative"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent h-px top-0" />
-            
-            <CountUpStats
-              stats={[
-                {
-                  label: "Total Solved",
-                  value: data.totalProblems,
-                  color: "purple"
-                },
-                {
-                  label: "Perfect Solves",
-                  value: data.perfectSolves,
-                  color: "green"
-                },
-                {
-                  label: "Avg Time",
-                  value: data.avgTime,
-                  suffix: " min",
-                  decimal: 1,
-                  color: "blue"
-                },
-                {
-                  label: "Success Rate",
-                  value: data.totalProblems > 0 ? (data.perfectSolves / data.totalProblems * 100) : 0,
-                  suffix: "%",
-                  color: "orange"
-                }
-              ]}
-              className="pt-6"
-              staggerDelay={0.1}
-            />
-          </motion.div>
-
-          {/* Tips Section */}
-          {data.tips.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.8 }}
-              className="relative"
-            >
-              <GlassCard variant="default" size="sm" className="border-white/30">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-blue-cyan shrink-0 shadow-glow-blue">
-                    <TrendingUp className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-gradient-blue-cyan mb-3">
-                      Improvement Tips:
-                    </h4>
-                    <ul className="space-y-2">
-                      {data.tips.slice(0, 3).map((tip, index) => (
-                        <motion.li
-                          key={index}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 2 + index * 0.1 }}
-                          className="text-xs text-muted-foreground flex items-start gap-2"
-                        >
-                          <div className="h-1 w-1 rounded-full bg-electric-cyan mt-2 shrink-0" />
-                          <span>{tip}</span>
-                        </motion.li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </GlassCard>
-            </motion.div>
-          )}
 
           {/* Ready Celebration */}
           {isReady && (

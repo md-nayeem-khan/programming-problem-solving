@@ -103,18 +103,21 @@ export function CompanyReadinessCard() {
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
-      whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
     >
-      <Card className="bg-gradient-to-br from-slate-100 via-gray-50 to-zinc-100 dark:from-slate-950/40 dark:via-gray-900/20 dark:to-zinc-950/40 border-2 border-slate-300 dark:border-slate-700 overflow-hidden relative shadow-xl shadow-slate-500/20 hover:shadow-2xl hover:shadow-slate-500/30 transition-shadow duration-300">
+      <Card className="dashboard-card dashboard-card-slate dashboard-soft-grid group border-2 border-slate-300/80 dark:border-slate-700 overflow-hidden relative shadow-xl shadow-slate-500/20 hover:shadow-2xl hover:shadow-slate-500/35 transition-all duration-300">
         {/* Decorative gradient orbs */}
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-slate-400/30 to-zinc-400/30 rounded-full blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-tr from-zinc-400/20 to-slate-400/20 rounded-full blur-2xl" />
+        <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-slate-400/30 to-zinc-400/30 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="pointer-events-none absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-tr from-zinc-400/20 to-slate-400/20 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         
         <CardHeader className="relative">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-600 to-zinc-700 shadow-lg shadow-slate-500/30">
+            <motion.div
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-600 to-zinc-700 shadow-lg shadow-slate-500/30"
+              whileHover={{ rotate: 8, scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+            >
               <Building2 className="h-4 w-4 text-white" />
-            </div>
+            </motion.div>
             <span className="bg-gradient-to-r from-slate-700 to-zinc-600 bg-clip-text text-transparent">
               Company Readiness
             </span>
@@ -132,7 +135,8 @@ export function CompanyReadinessCard() {
               <motion.div
                 key={company.company}
                 variants={staggerItem}
-                className="group cursor-pointer"
+                className="dashboard-metric-pill group cursor-pointer rounded-xl px-3 py-2"
+                whileHover={{ y: -2, scale: 1.01 }}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
@@ -186,18 +190,6 @@ export function CompanyReadinessCard() {
             </div>
           )}
 
-          {companies.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="mt-4 p-3 rounded-lg bg-slate-100/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800"
-            >
-              <p className="text-xs text-center text-muted-foreground">
-                💼 Click a company to see detailed breakdown
-              </p>
-            </motion.div>
-          )}
         </CardContent>
       </Card>
     </motion.div>

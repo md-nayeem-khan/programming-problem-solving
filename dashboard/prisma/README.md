@@ -77,12 +77,6 @@ npx prisma migrate dev --name switch_to_postgres
 npx prisma generate
 ```
 
-4. Re-seed data:
-
-```bash
-npx prisma db seed
-```
-
 ## Commands
 
 ```bash
@@ -97,9 +91,6 @@ npx prisma migrate deploy
 
 # Reset database (WARNING: deletes all data)
 npx prisma migrate reset
-
-# Seed database
-npx prisma db seed
 
 # Open Prisma Studio (database GUI)
 npx prisma studio

@@ -290,7 +290,13 @@ export function WeakAreasCard() {
       animate="visible"
       className="group"
     >
-      <GlassCard variant="default" className="min-h-[400px] bg-white/80" hover={true}>
+      <GlassCard
+        variant="default"
+        className="dashboard-card dashboard-card-sun dashboard-soft-grid group min-h-[400px] border-orange-200/60 shadow-xl shadow-orange-500/20"
+        hover={true}
+      >
+        <div className="pointer-events-none absolute -top-10 -right-8 h-24 w-24 rounded-full bg-orange-400/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
         {/* Header */}
         <CardHeader className="relative pb-4">
           <motion.div
@@ -345,8 +351,8 @@ export function WeakAreasCard() {
                   className="group/item"
                 >
                   <motion.div
-                    className={`relative p-4 rounded-xl border-2 ${config.bg} ${config.glow} transition-all duration-300 cursor-pointer`}
-                    whileHover={{ scale: 1.02 }}
+                    className={`relative p-4 rounded-xl border-2 ${config.bg} ${config.glow} transition-all duration-300 cursor-pointer backdrop-blur-sm`}
+                    whileHover={{ scale: 1.02, y: -2 }}
                     onClick={() => toggleExpanded(weakness.pattern)}
                   >
                     {/* Priority Indicator */}
