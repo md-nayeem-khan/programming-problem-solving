@@ -1,23 +1,25 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 
-const prisma = new PrismaClient()
+const MOCK_PLATFORM = 'mock'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '10')
     const recent = searchParams.get('recent') === 'true'
+    const where = recent
+      ? {
+          date: {
+            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          },
+        }
+      : undefined
 
     const mockInterviews = await prisma.mockInterview.findMany({
       take: limit,
       orderBy: { date: 'desc' },
-      where: recent ? {
-        date: {
-          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
-        }
-      } : undefined,
+      where,
       include: {
         problem: {
           include: {
@@ -31,20 +33,23 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Calculate summary statistics
-    const totalMocks = await prisma.mockInterview.count()
+    // Count only completed mock interviews (with recorded time) for readiness stats.
+    const completedWhere = {
+      timeTakenSeconds: { not: null },
+    }
+
+    const totalMocks = await prisma.mockInterview.count({ where: completedWhere })
     const passedMocks = await prisma.mockInterview.count({
-      where: { solved: true }
+      where: { ...completedWhere, solved: true },
     })
-    const avgExplanationScore = await prisma.mockInterview.aggregate({
+    const avgScores = await prisma.mockInterview.aggregate({
       _avg: {
         explanationScore: true,
         codeQualityScore: true,
-        overallScore: true
+        overallScore: true,
+        timeTakenSeconds: true,
       },
-      where: {
-        explanationScore: { not: null }
-      }
+      where: completedWhere,
     })
 
     const passRate = totalMocks > 0 ? (passedMocks / totalMocks) * 100 : 0
@@ -55,12 +60,13 @@ export async function GET(request: NextRequest) {
         total: totalMocks,
         passed: passedMocks,
         passRate: Math.round(passRate * 100) / 100,
+        avgDurationMinutes: Math.round(((avgScores._avg.timeTakenSeconds || 0) / 60) * 100) / 100,
         avgScores: {
-          explanation: Math.round((avgExplanationScore._avg.explanationScore || 0) * 100) / 100,
-          codeQuality: Math.round((avgExplanationScore._avg.codeQualityScore || 0) * 100) / 100,
-          overall: Math.round((avgExplanationScore._avg.overallScore || 0) * 100) / 100
-        }
-      }
+          explanation: Math.round((avgScores._avg.explanationScore || 0) * 100) / 100,
+          codeQuality: Math.round((avgScores._avg.codeQualityScore || 0) * 100) / 100,
+          overall: Math.round((avgScores._avg.overallScore || 0) * 100) / 100,
+        },
+      },
     })
     
   } catch (error) {
@@ -77,35 +83,64 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       problemId,
+      problemTitle,
+      date,
+      timeLimit,
       timeTakenSeconds,
       patternRecognitionSeconds,
       solved,
       explanationScore,
       codeQualityScore,
-      notes
+      notes,
     } = body
 
-    // Validate required fields
-    if (!problemId) {
+    let resolvedProblemId = problemId
+
+    if (!resolvedProblemId && !problemTitle) {
       return NextResponse.json(
-        { error: 'problemId is required' },
+        { error: 'problemId or problemTitle is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!resolvedProblemId && problemTitle) {
+      const generatedProblemId = `mock-${Date.now()}`
+      const createdProblem = await prisma.problem.create({
+        data: {
+          platform: MOCK_PLATFORM,
+          problemId: generatedProblemId,
+          title: problemTitle,
+          difficulty: 'Medium',
+          source: 'NeetCode',
+          company: null,
+        },
+      })
+
+      resolvedProblemId = createdProblem.id
+    }
+
+    if (!resolvedProblemId) {
+      return NextResponse.json(
+        { error: 'Failed to resolve problem for mock interview' },
         { status: 400 }
       )
     }
 
     // Calculate overall score if both scores are provided
     let overallScore = null
-    if (explanationScore && codeQualityScore) {
+    if (explanationScore !== null && explanationScore !== undefined && codeQualityScore !== null && codeQualityScore !== undefined) {
       overallScore = (explanationScore + codeQualityScore) / 2
     }
 
     // Create mock interview record
     const mockInterview = await prisma.mockInterview.create({
       data: {
-        problemId,
+        problemId: resolvedProblemId,
+        date: date ? new Date(date) : new Date(),
+        timeLimit: typeof timeLimit === 'number' ? timeLimit * 60 : 2700,
         timeTakenSeconds: timeTakenSeconds || null,
         patternRecognitionSeconds: patternRecognitionSeconds || null,
-        solved: solved || false,
+        solved: Boolean(solved),
         explanationScore: explanationScore || null,
         codeQualityScore: codeQualityScore || null,
         overallScore,

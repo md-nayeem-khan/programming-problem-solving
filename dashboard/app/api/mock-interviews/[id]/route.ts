@@ -72,32 +72,35 @@ export async function PUT(
       )
     }
 
-    const { 
-      status, 
-      timeSpent,
-      score,
-      approachClarity,
-      codeQuality,
-      problemSolving,
-      timeManagement,
-      communication,
-      feedback
+    const {
+      date,
+      timeLimit,
+      timeTakenSeconds,
+      patternRecognitionSeconds,
+      solved,
+      explanationScore,
+      codeQualityScore,
+      notes,
     } = body
 
     const updateData: any = {}
-    
-    if (status) updateData.status = status
-    if (timeSpent !== undefined) updateData.timeSpent = timeSpent
-    if (score !== undefined) updateData.score = score
-    if (approachClarity !== undefined) updateData.approachClarity = approachClarity
-    if (codeQuality !== undefined) updateData.codeQuality = codeQuality
-    if (problemSolving !== undefined) updateData.problemSolving = problemSolving
-    if (timeManagement !== undefined) updateData.timeManagement = timeManagement
-    if (communication !== undefined) updateData.communication = communication
-    if (feedback !== undefined) updateData.feedback = feedback
-    
-    if (status === 'completed') {
-      updateData.completedAt = new Date()
+
+    if (date !== undefined) updateData.date = new Date(date)
+    if (timeLimit !== undefined) updateData.timeLimit = timeLimit
+    if (timeTakenSeconds !== undefined) updateData.timeTakenSeconds = timeTakenSeconds
+    if (patternRecognitionSeconds !== undefined) updateData.patternRecognitionSeconds = patternRecognitionSeconds
+    if (solved !== undefined) updateData.solved = Boolean(solved)
+    if (explanationScore !== undefined) updateData.explanationScore = explanationScore
+    if (codeQualityScore !== undefined) updateData.codeQualityScore = codeQualityScore
+    if (notes !== undefined) updateData.notes = notes
+
+    const hasExplanation = explanationScore !== null && explanationScore !== undefined
+    const hasCodeQuality = codeQualityScore !== null && codeQualityScore !== undefined
+
+    if (hasExplanation && hasCodeQuality) {
+      updateData.overallScore = (explanationScore + codeQualityScore) / 2
+    } else if (hasExplanation || hasCodeQuality) {
+      updateData.overallScore = null
     }
 
     const mockInterview = await prisma.mockInterview.update({
