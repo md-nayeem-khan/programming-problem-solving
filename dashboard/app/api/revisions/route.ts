@@ -12,15 +12,23 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const includeCompleted = searchParams.get('includeCompleted') === 'true'
     
-    // Get today's date normalized to UTC
-    const today = new Date()
-    today.setUTCHours(0, 0, 0, 0)
+    // Use local day boundaries so "today" and "this week" match user expectations.
+    const now = new Date()
+    const startOfToday = new Date(now)
+    startOfToday.setHours(0, 0, 0, 0)
+
+    const startOfTomorrow = new Date(startOfToday)
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1)
+
+    // Upcoming window: tomorrow through the next 7 days.
+    const endOfUpcomingWindow = new Date(startOfToday)
+    endOfUpcomingWindow.setDate(endOfUpcomingWindow.getDate() + 8)
     
     // Get all revisions that are due today or overdue
     const dueRevisions = await prisma.revision.findMany({
       where: {
         nextReviewDate: {
-          lte: today
+          lt: startOfTomorrow
         },
         ...(includeCompleted ? {} : { completed: false })
       },
@@ -35,7 +43,12 @@ export async function GET(request: NextRequest) {
                 platform: true,
                 source: true,
                 company: true,
-                url: true
+                url: true,
+                patterns: {
+                  include: {
+                    pattern: true
+                  }
+                }
               }
             }
           }
@@ -47,15 +60,12 @@ export async function GET(request: NextRequest) {
       ]
     })
 
-    // Get upcoming revisions for the next 7 days
-    const nextWeek = new Date(today)
-    nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
-    
+    // Get upcoming revisions for the next 7 days (excluding today)
     const upcomingRevisions = await prisma.revision.findMany({
       where: {
         nextReviewDate: {
-          gt: today,
-          lte: nextWeek
+          gte: startOfTomorrow,
+          lt: endOfUpcomingWindow
         },
         completed: false
       },
@@ -67,7 +77,15 @@ export async function GET(request: NextRequest) {
                 id: true,
                 title: true,
                 difficulty: true,
-                platform: true
+                platform: true,
+                source: true,
+                company: true,
+                url: true,
+                patterns: {
+                  include: {
+                    pattern: true
+                  }
+                }
               }
             }
           }
@@ -94,7 +112,7 @@ export async function GET(request: NextRequest) {
     
     const overdueCount = dueRevisions.filter(revision => {
       const reviewDate = new Date(revision.nextReviewDate)
-      return reviewDate < today
+      return reviewDate < startOfToday
     }).length
 
     return NextResponse.json({

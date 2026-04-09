@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+const REVISION_INTERVALS = [1, 3, 7, 14]
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -192,19 +194,92 @@ export async function POST(request: NextRequest) {
       // Don't fail the submission if daily progress update fails
     }
 
-    // Auto-schedule revision for successful submissions
+    // Maintain spaced repetition schedule.
     try {
-      if (status === 'solved') {
-        // Check if revision already exists for this submission
-        const existingRevision = await prisma.revision.findFirst({
-          where: { submissionId: submission.id }
+      const isRevisionAttempt = attemptType === 'Revision'
+      const wasSuccessful = status === 'solved'
+
+      if (isRevisionAttempt) {
+        const activeRevision = await prisma.revision.findFirst({
+          where: {
+            completed: false,
+            submission: {
+              problemId
+            }
+          },
+          orderBy: [
+            { nextReviewDate: 'asc' },
+            { intervalLevel: 'asc' }
+          ]
         })
 
-        if (!existingRevision) {
-          // Calculate first revision date (1 day after solving)
-          const reviewDate = new Date()
-          reviewDate.setUTCDate(reviewDate.getUTCDate() + 1)
-          reviewDate.setUTCHours(0, 0, 0, 0)
+        let baseLevel = 0
+        let previousRevisionId: number | null = null
+
+        if (activeRevision) {
+          baseLevel = activeRevision.intervalLevel
+          previousRevisionId = activeRevision.id
+
+          await prisma.revision.update({
+            where: { id: activeRevision.id },
+            data: {
+              completed: true,
+              completedAt: submission.submittedAt,
+              wasSuccessful,
+              timeSpentSeconds,
+              solvedWithoutHint: !wasHintUsed,
+              notes: notes || null,
+            }
+          })
+        } else {
+          const latestRevision = await prisma.revision.findFirst({
+            where: {
+              submission: {
+                problemId
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
+          })
+
+          if (latestRevision) {
+            baseLevel = latestRevision.intervalLevel
+            previousRevisionId = latestRevision.id
+          }
+        }
+
+        const nextLevel = wasSuccessful
+          ? Math.min(baseLevel + 1, REVISION_INTERVALS.length - 1)
+          : baseLevel
+
+        const nextReviewDate = new Date(submission.submittedAt)
+        nextReviewDate.setDate(nextReviewDate.getDate() + REVISION_INTERVALS[nextLevel])
+        nextReviewDate.setHours(0, 0, 0, 0)
+
+        await prisma.revision.create({
+          data: {
+            submissionId: submission.id,
+            intervalLevel: nextLevel,
+            nextReviewDate,
+            completed: false,
+            ...(previousRevisionId ? { previousRevisionId } : {}),
+          }
+        })
+      } else if (wasSuccessful) {
+        const existingPendingRevision = await prisma.revision.findFirst({
+          where: {
+            completed: false,
+            submission: {
+              problemId
+            }
+          }
+        })
+
+        if (!existingPendingRevision) {
+          const reviewDate = new Date(submission.submittedAt)
+          reviewDate.setDate(reviewDate.getDate() + REVISION_INTERVALS[0])
+          reviewDate.setHours(0, 0, 0, 0)
 
           await prisma.revision.create({
             data: {
@@ -217,8 +292,8 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (revisionError) {
-      console.error('Error scheduling revision:', revisionError)
-      // Don't fail the submission if revision scheduling fails
+      console.error('Error updating revision schedule:', revisionError)
+      // Don't fail the submission if revision updates fail
     }
     
     return NextResponse.json({ submission }, { status: 201 })

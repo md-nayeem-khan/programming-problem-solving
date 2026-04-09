@@ -1,24 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { 
   Calendar,
   RotateCcw,
   Clock,
-  CheckCircle2,
-  AlertTriangle,
-  Target,
   Sparkles,
   AlertCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RevisionCompletionModal } from "@/components/revision/RevisionCompletionModal";
-import { PerformanceAnalysisCard } from "@/components/revision/PerformanceAnalysisCard";
-import { RevisionHistoryModal } from "@/components/revision/RevisionHistoryModal";
 import {
   staggerContainer,
   staggerItem,
@@ -38,31 +32,11 @@ interface RevisionItem {
   company?: string;
 }
 
-interface CompletionResult {
-  wasSuccessful: boolean;
-  timeSpentSeconds?: number;
-  solvedWithoutHint?: boolean;
-  confidenceLevel?: number;
-  difficultyRating?: number;
-  notes?: string;
-}
-
-interface PerformanceAnalysis {
-  originalTimeSeconds: number;
-  revisionTimeSeconds: number;
-  improvementSeconds: number;
-  improvementPercentage: number;
-  wasImprovement: boolean;
-}
-
 export default function RevisionPage() {
+  const router = useRouter();
   const [revisions, setRevisions] = useState<RevisionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [performanceAnalysis, setPerformanceAnalysis] = useState<{
-    analysis: PerformanceAnalysis;
-    problemTitle: string;
-  } | null>(null);
 
   useEffect(() => {
     async function fetchRevisions() {
@@ -75,6 +49,9 @@ export default function RevisionPage() {
         // The API returns { dueToday: [], upcoming: [], statistics: {} }
         const allRevisions = [...(data.dueToday || []), ...(data.upcoming || [])];
         
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
         const revisionItems: RevisionItem[] = allRevisions.map((item: any) => ({
           id: item.id,
           problemId: item.submission?.problem?.id || item.problemId,
@@ -84,7 +61,7 @@ export default function RevisionPage() {
           dueDate: item.nextReviewDate,
           interval: item.intervalLevel || 0,
           repetition: item.repetitionCount || 0,
-          isOverdue: new Date(item.nextReviewDate) < new Date(),
+          isOverdue: new Date(item.nextReviewDate) < startOfToday,
           company: item.submission?.problem?.company,
         }));
         
@@ -134,48 +111,14 @@ export default function RevisionPage() {
 
   const upcomingRevisions = revisions.filter(r => {
     const dueDate = parseISO(r.dueDate);
-    const today = new Date();
-    const nextWeek = addDays(today, 7);
-    return dueDate > today && dueDate <= nextWeek;
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const startOfTomorrow = addDays(startOfToday, 1);
+    const endOfWindow = addDays(startOfToday, 8);
+
+    return dueDate >= startOfTomorrow && dueDate < endOfWindow;
   });
-
-  const handleMarkComplete = async (revisionId: number, result: CompletionResult) => {
-    try {
-      const response = await fetch(`/api/revisions/${revisionId}/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(result),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to complete revision');
-      }
-
-      const data = await response.json();
-      
-      // Show performance analysis if available
-      if (data.performanceAnalysis) {
-        const revision = revisions.find(r => r.id === revisionId);
-        setPerformanceAnalysis({
-          analysis: data.performanceAnalysis,
-          problemTitle: revision?.problemTitle || 'Unknown Problem'
-        });
-        
-        // Auto-hide after 10 seconds
-        setTimeout(() => {
-          setPerformanceAnalysis(null);
-        }, 10000);
-      }
-      
-      // Remove the completed revision from the list
-      setRevisions(prev => prev.filter(r => r.id !== revisionId));
-    } catch (err) {
-      console.error('Failed to mark revision as complete:', err);
-      // You might want to add a toast notification here
-    }
-  };
 
   if (loading) {
     return (
@@ -210,17 +153,6 @@ export default function RevisionPage() {
 
   return (
     <div className="space-y-8 p-2">
-      {/* Performance Analysis Overlay */}
-      <AnimatePresence>
-        {performanceAnalysis && (
-          <PerformanceAnalysisCard
-            analysis={performanceAnalysis.analysis}
-            problemTitle={performanceAnalysis.problemTitle}
-            onClose={() => setPerformanceAnalysis(null)}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -268,7 +200,13 @@ export default function RevisionPage() {
               {todayRevisions.slice(0, 5).map((revision) => (
                 <div key={revision.id} className="flex items-center justify-between p-3 bg-white/70 rounded-lg border border-teal-200">
                   <div className="flex-1">
-                    <div className="font-medium">{revision.problemTitle}</div>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/problems/${revision.problemId}?from=revision`)}
+                      className="font-medium text-left hover:underline text-teal-800"
+                    >
+                      {revision.problemTitle}
+                    </button>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge className={getDifficultyColor(revision.difficulty)}>
                         {revision.difficulty}
@@ -278,17 +216,6 @@ export default function RevisionPage() {
                         {getRevisionIcon(revision.repetition)} Rep {revision.repetition + 1}
                       </span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RevisionHistoryModal 
-                      revisionId={revision.id}
-                      problemTitle={revision.problemTitle}
-                    />
-                    <RevisionCompletionModal
-                      revision={revision}
-                      onComplete={(result) => handleMarkComplete(revision.id, result)}
-                      isOverdue={revision.isOverdue}
-                    />
                   </div>
                 </div>
               ))}
@@ -319,7 +246,13 @@ export default function RevisionPage() {
                   className="flex items-center justify-between p-3 bg-white/70 rounded-lg border border-purple-200"
                 >
                   <div className="flex-1">
-                    <div className="font-medium text-sm">{revision.problemTitle}</div>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/problems/${revision.problemId}?from=revision`)}
+                      className="font-medium text-sm text-left hover:underline text-purple-800"
+                    >
+                      {revision.problemTitle}
+                    </button>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge className={getDifficultyColor(revision.difficulty)}>
                         {revision.difficulty}
@@ -329,17 +262,6 @@ export default function RevisionPage() {
                         📅 {getDateLabel(revision.dueDate, revision.isOverdue)}
                       </span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RevisionHistoryModal 
-                      revisionId={revision.id}
-                      problemTitle={revision.problemTitle}
-                    />
-                    <RevisionCompletionModal
-                      revision={revision}
-                      onComplete={(result) => handleMarkComplete(revision.id, result)}
-                      isOverdue={revision.isOverdue}
-                    />
                   </div>
                 </div>
               ))}

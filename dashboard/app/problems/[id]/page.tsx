@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -95,6 +95,7 @@ interface TimerState {
 interface NewSubmission {
   timeSpentMinutes: number;
   usedHints: boolean;
+  isRevision: boolean;
   approach: string;
   notes: string;
   passed: boolean;
@@ -142,7 +143,9 @@ const getDifficultyColor = (difficulty: string) => {
 export default function ProblemDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const problemId = params.id as string;
+  const isFromRevisionPage = searchParams.get("from") === "revision";
 
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,6 +164,7 @@ export default function ProblemDetailsPage() {
   const [submissionForm, setSubmissionForm] = useState<NewSubmission>({
     timeSpentMinutes: 0,
     usedHints: false,
+    isRevision: false,
     approach: "",
     notes: "",
     passed: true,  // Default to solved/passed
@@ -255,8 +259,14 @@ export default function ProblemDetailsPage() {
       setSubmissionForm(prev => ({
         ...prev,
         timeSpentMinutes: minutes,
+        isRevision: isFromRevisionPage ? true : prev.isRevision,
       }));
       toast.success(`Time automatically set to ${minutes} minutes from timer`);
+    } else if (isFromRevisionPage) {
+      setSubmissionForm(prev => ({
+        ...prev,
+        isRevision: true,
+      }));
     }
     
     // Open the modal
@@ -286,7 +296,7 @@ export default function ProblemDetailsPage() {
           wasHintUsed: submissionForm.usedHints,
           approachNote: submissionForm.approach,
           notes: submissionForm.notes,
-          attemptType: 'First',
+          attemptType: submissionForm.isRevision ? 'Revision' : 'First',
           submittedAt: new Date().toISOString(),
         }),
       });
@@ -303,9 +313,10 @@ export default function ProblemDetailsPage() {
       setSubmissionForm({
         timeSpentMinutes: 0,
         usedHints: false,
+        isRevision: false,
         approach: "",
         notes: "",
-        passed: false,
+        passed: true,
       });
       resetTimer();
 
@@ -470,7 +481,7 @@ export default function ProblemDetailsPage() {
                             </div>
 
                             {/* Status Checkboxes */}
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-6 flex-wrap">
                               <div className="flex items-center space-x-3">
                                 <Checkbox
                                   id="passed"
@@ -481,6 +492,19 @@ export default function ProblemDetailsPage() {
                                 />
                                 <Label htmlFor="passed" className="text-sm font-medium cursor-pointer">
                                   Solved
+                                </Label>
+                              </div>
+
+                              <div className="flex items-center space-x-3">
+                                <Checkbox
+                                  id="isRevision"
+                                  checked={submissionForm.isRevision}
+                                  onCheckedChange={(checked) =>
+                                    setSubmissionForm(prev => ({ ...prev, isRevision: !!checked }))
+                                  }
+                                />
+                                <Label htmlFor="isRevision" className="text-sm font-medium cursor-pointer">
+                                  Revision
                                 </Label>
                               </div>
 
@@ -581,6 +605,7 @@ export default function ProblemDetailsPage() {
                         <TableRow>
                           <TableHead>Date</TableHead>
                           <TableHead>Result</TableHead>
+                          <TableHead>Type</TableHead>
                           <TableHead>Time</TableHead>
                           <TableHead>Hints</TableHead>
                           <TableHead>Action</TableHead>
@@ -612,6 +637,18 @@ export default function ProblemDetailsPage() {
                                     Failed
                                   </>
                                 )}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  submission.attemptType === "Revision"
+                                    ? "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300"
+                                    : "bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/20 dark:text-sky-300"
+                                }
+                              >
+                                {submission.attemptType === "Revision" ? "Revision" : "First"}
                               </Badge>
                             </TableCell>
                             <TableCell>
