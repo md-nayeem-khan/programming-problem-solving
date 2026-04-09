@@ -39,6 +39,15 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddProblemForm } from "@/components/forms/AddProblemForm";
+import { EditProblemForm } from "@/components/forms/EditProblemForm";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   staggerContainer,
   staggerItem,
@@ -46,6 +55,7 @@ import {
   scaleIn,
 } from "@/lib/animations";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 // Types
 interface Problem {
@@ -286,6 +296,11 @@ export default function ProblemsPage() {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingProblem, setEditingProblem] = useState<Problem | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingProblem, setDeletingProblem] = useState<Problem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<Filters>({
     search: "",
@@ -386,8 +401,89 @@ export default function ProblemsPage() {
     });
   };
 
+  const handleDeleteProblem = async () => {
+    if (!deletingProblem?.id) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/problems/${deletingProblem.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete problem");
+      }
+
+      toast.success("Problem deleted", {
+        description: `${deletingProblem.title} has been removed`,
+      });
+
+      setIsDeleteModalOpen(false);
+      setDeletingProblem(null);
+      await fetchProblems();
+    } catch {
+      toast.error("Failed to delete problem", {
+        description: "Please try again",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
+      <Dialog
+        open={isDeleteModalOpen}
+        onOpenChange={(open) => {
+          setIsDeleteModalOpen(open);
+          if (!open && !isDeleting) {
+            setDeletingProblem(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Problem</DialogTitle>
+            <DialogDescription>
+              {`Are you sure you want to delete "${deletingProblem?.title || "this problem"}"? This action cannot be undone.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setDeletingProblem(null);
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteProblem}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <EditProblemForm
+        open={isEditModalOpen}
+        onOpenChange={(open) => {
+          setIsEditModalOpen(open);
+          if (!open) {
+            setEditingProblem(null);
+          }
+        }}
+        problem={editingProblem}
+        onSuccess={fetchProblems}
+      />
+
       {/* Page Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -752,7 +848,8 @@ export default function ProblemsPage() {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  router.push(`/problems/${problem.id}/edit`);
+                                  setEditingProblem(problem);
+                                  setIsEditModalOpen(true);
                                 }}
                                 className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                                 title="Edit Problem"
@@ -766,8 +863,8 @@ export default function ProblemsPage() {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // Add delete confirmation logic here
-                                  console.log('Delete problem:', problem.id);
+                                  setDeletingProblem(problem);
+                                  setIsDeleteModalOpen(true);
                                 }}
                                 className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                                 title="Delete Problem"
