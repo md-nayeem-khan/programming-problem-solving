@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const timeframe = searchParams.get('timeframe') // 'week', 'month', 'all'
-    const company = searchParams.get('company') // Optional filter by company
+    const companyIdParam = searchParams.get('companyId')
     const source = searchParams.get('source') // Optional filter by source
     const difficulty = searchParams.get('difficulty') // 'easy', 'medium', 'hard'
 
@@ -26,7 +26,16 @@ export async function GET(request: NextRequest) {
 
     // Build problem filter
     const problemWhere: any = {}
-    if (company) problemWhere.company = company
+    const companyId = companyIdParam ? Number(companyIdParam) : null
+    const hasValidCompanyId = Number.isInteger(companyId) && (companyId as number) > 0
+
+    if (hasValidCompanyId) {
+      problemWhere.companies = {
+        some: {
+          companyId,
+        },
+      }
+    }
     if (source) problemWhere.source = source
     if (difficulty) problemWhere.difficulty = difficulty
 
@@ -48,7 +57,6 @@ export async function GET(request: NextRequest) {
             platform: true,
             problemId: true,
             source: true,
-            company: true,
           }
         }
       },

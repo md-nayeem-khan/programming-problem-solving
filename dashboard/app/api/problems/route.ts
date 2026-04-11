@@ -2,6 +2,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+async function resolveCompanyIds(input: {
+  companyIds?: unknown
+}): Promise<number[]> {
+  if (Array.isArray(input.companyIds)) {
+    const ids = input.companyIds
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0)
+    return Array.from(new Set(ids))
+  }
+
+  return []
+}
+
 // GET /api/problems - List all problems with filters
 export async function GET(request: NextRequest) {
   try {
@@ -22,38 +35,60 @@ export async function GET(request: NextRequest) {
     
     // NEW FILTERS
     const source = normalizeFilter(searchParams.get('source'))
-    const company = normalizeFilter(searchParams.get('company'))
+    const companyIdParam = normalizeFilter(searchParams.get('companyId'))
 
     const where: any = {}
+    const andClauses: any[] = []
 
     if (platform) where.platform = platform
     if (difficulty) where.difficulty = difficulty
     if (source) where.source = source
-    if (company) where.company = company
-    if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { problemId: { contains: search } },
-        { platform: { contains: search } },
-        { company: { contains: search } },
-        { source: { contains: search } },
-        {
-          tags: {
-            some: {
-              tag: { contains: search },
-            },
+    const companyId = companyIdParam ? Number(companyIdParam) : null
+    const hasValidCompanyId = Number.isInteger(companyId) && (companyId as number) > 0
+
+    if (hasValidCompanyId) {
+      andClauses.push({
+        companies: {
+          some: {
+            companyId: companyId,
           },
         },
-        {
-          patterns: {
-            some: {
-              pattern: {
-                name: { contains: search },
+      })
+    }
+    if (search) {
+      andClauses.push({
+        OR: [
+          { title: { contains: search } },
+          { problemId: { contains: search } },
+          { platform: { contains: search } },
+          { source: { contains: search } },
+          {
+            companies: {
+              some: {
+                company: {
+                  name: { contains: search },
+                },
               },
             },
           },
-        },
-      ]
+          {
+            tags: {
+              some: {
+                tag: { contains: search },
+              },
+            },
+          },
+          {
+            patterns: {
+              some: {
+                pattern: {
+                  name: { contains: search },
+                },
+              },
+            },
+          },
+        ]
+      })
     }
     if (tag) {
       where.tags = {
@@ -71,6 +106,9 @@ export async function GET(request: NextRequest) {
         },
       }
     }
+    if (andClauses.length > 0) {
+      where.AND = andClauses
+    }
 
     const problems = await prisma.problem.findMany({
       where,
@@ -81,6 +119,16 @@ export async function GET(request: NextRequest) {
             pattern: true,
           },
         },
+        companies: {
+          include: {
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
         submissions: {
           orderBy: { submittedAt: 'desc' },
           take: 1,
@@ -89,7 +137,7 @@ export async function GET(request: NextRequest) {
           select: { submissions: true },
         },
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
       ...(limit && !isNaN(parseInt(limit)) ? { take: parseInt(limit) } : {}),
     })
 
@@ -104,7 +152,9 @@ export async function GET(request: NextRequest) {
       
       // NEW FIELDS
       source: problem.source,
-      company: problem.company,
+      company: problem.companies[0]?.company.name ?? null,
+      companies: problem.companies.map((entry) => entry.company.name),
+      companyIds: problem.companies.map((entry) => entry.company.id),
       
       tags: problem.tags.map((t) => t.tag),
       patterns: problem.patterns.map((p) => ({
@@ -151,8 +201,9 @@ export async function POST(request: NextRequest) {
       notes,
       // NEW FIELDS
       source = 'NeetCode',  // Default to NeetCode
-      company 
+      companyIds,
     } = body
+    const resolvedCompanyIds = await resolveCompanyIds({ companyIds })
 
     // Validation
     if (!platform || !problemId || !title || !difficulty) {
@@ -166,15 +217,6 @@ export async function POST(request: NextRequest) {
     if (source && !['NeetCode', 'Company'].includes(source)) {
       return NextResponse.json(
         { error: 'Source must be "NeetCode" or "Company"' },
-        { status: 400 }
-      )
-    }
-
-    // Validate company if provided
-    const validCompanies = ['Amazon', 'Google', 'Meta', 'Apple', 'Netflix', 'Microsoft']
-    if (company && !validCompanies.includes(company)) {
-      return NextResponse.json(
-        { error: `Company must be one of: ${validCompanies.join(', ')}` },
         { status: 400 }
       )
     }
@@ -207,7 +249,13 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         // NEW FIELDS
         source,
-        company: company || null,
+        companies: {
+          create: resolvedCompanyIds.map((id) => ({
+            company: {
+              connect: { id },
+            },
+          })),
+        },
         tags: {
           create: (tags || []).map((tag: string) => ({ tag })),
         },
@@ -224,6 +272,16 @@ export async function POST(request: NextRequest) {
             pattern: true,
           },
         },
+        companies: {
+          include: {
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     })
 
@@ -231,6 +289,9 @@ export async function POST(request: NextRequest) {
       {
         problem: {
           ...problem,
+          company: problem.companies[0]?.company.name ?? null,
+          companies: problem.companies.map((entry) => entry.company.name),
+          companyIds: problem.companies.map((entry) => entry.company.id),
           tags: problem.tags.map((t) => t.tag),
           patterns: problem.patterns.map((p) => ({
             id: p.pattern.id,

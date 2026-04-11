@@ -23,9 +23,9 @@ model Problem {
 
   // NEW FIELDS for FAANG readiness
   source     String   @default("NeetCode")  // "NeetCode" | "Company"
-  company    String?  // "Amazon" | "Google" | "Meta" | "Apple" | "Netflix" | "Microsoft" | null
 
   tags           ProblemTag[]
+  companies      ProblemCompany[]
   patterns       ProblemPattern[]
   submissions    Submission[]
   sessions       Session[]
@@ -35,10 +35,22 @@ model Problem {
   @@index([platform])
   @@index([difficulty])
   @@index([source])
-  @@index([company])
-  @@index([company, source]) // NEW: Composite for company analytics
   @@index([source, difficulty]) // NEW: For filtered company queries
   @@map("problems")
+}
+
+model ProblemCompany {
+  id        Int    @id @default(autoincrement())
+  problemId Int
+  companyId Int
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  company CompanyCard @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([problemId, companyId])
+  @@index([problemId])
+  @@index([companyId])
+  @@map("problem_companies")
 }
 
 model ProblemTag {
@@ -63,6 +75,19 @@ model Pattern {
 
   @@index([category])
   @@map("patterns")
+}
+
+model CompanyCard {
+  id             Int      @id @default(autoincrement())
+  name           String   @unique
+  icon           String   @default("🏢")
+  targetProblems Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  problems       ProblemCompany[]
+
+  @@map("company_cards")
 }
 
 model ProblemPattern {

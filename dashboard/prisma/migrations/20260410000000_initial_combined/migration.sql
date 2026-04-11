@@ -9,8 +9,7 @@ CREATE TABLE "problems" (
     "notes" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    "source" TEXT NOT NULL DEFAULT 'NeetCode',
-    "company" TEXT
+    "source" TEXT NOT NULL DEFAULT 'NeetCode'
 );
 
 -- CreateTable
@@ -30,12 +29,31 @@ CREATE TABLE "patterns" (
 );
 
 -- CreateTable
+CREATE TABLE "company_cards" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL,
+    "icon" TEXT NOT NULL DEFAULT '🏢',
+    "targetProblems" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
 CREATE TABLE "problem_patterns" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "problemId" INTEGER NOT NULL,
     "patternId" INTEGER NOT NULL,
     CONSTRAINT "problem_patterns_problemId_fkey" FOREIGN KEY ("problemId") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "problem_patterns_patternId_fkey" FOREIGN KEY ("patternId") REFERENCES "patterns" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "problem_companies" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "problemId" INTEGER NOT NULL,
+    "companyId" INTEGER NOT NULL,
+    CONSTRAINT "problem_companies_problemId_fkey" FOREIGN KEY ("problemId") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "problem_companies_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "company_cards" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -161,12 +179,6 @@ CREATE INDEX "problems_difficulty_idx" ON "problems"("difficulty");
 CREATE INDEX "problems_source_idx" ON "problems"("source");
 
 -- CreateIndex
-CREATE INDEX "problems_company_idx" ON "problems"("company");
-
--- CreateIndex
-CREATE INDEX "problems_company_source_idx" ON "problems"("company", "source");
-
--- CreateIndex
 CREATE INDEX "problems_source_difficulty_idx" ON "problems"("source", "difficulty");
 
 -- CreateIndex
@@ -185,6 +197,9 @@ CREATE UNIQUE INDEX "patterns_name_key" ON "patterns"("name");
 CREATE INDEX "patterns_category_idx" ON "patterns"("category");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "company_cards_name_key" ON "company_cards"("name");
+
+-- CreateIndex
 CREATE INDEX "problem_patterns_problemId_idx" ON "problem_patterns"("problemId");
 
 -- CreateIndex
@@ -195,6 +210,15 @@ CREATE INDEX "problem_patterns_patternId_problemId_idx" ON "problem_patterns"("p
 
 -- CreateIndex
 CREATE UNIQUE INDEX "problem_patterns_problemId_patternId_key" ON "problem_patterns"("problemId", "patternId");
+
+-- CreateIndex
+CREATE INDEX "problem_companies_problemId_idx" ON "problem_companies"("problemId");
+
+-- CreateIndex
+CREATE INDEX "problem_companies_companyId_idx" ON "problem_companies"("companyId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "problem_companies_problemId_companyId_key" ON "problem_companies"("problemId", "companyId");
 
 -- CreateIndex
 CREATE INDEX "submissions_problemId_idx" ON "submissions"("problemId");

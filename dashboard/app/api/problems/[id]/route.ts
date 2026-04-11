@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+async function resolveCompanyIds(input: {
+  companyIds?: unknown
+}): Promise<number[]> {
+  if (Array.isArray(input.companyIds)) {
+    const ids = input.companyIds
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0)
+    return Array.from(new Set(ids))
+  }
+
+  return []
+}
+
 // GET /api/problems/[id] - Get a single problem with details
 export async function GET(
   request: NextRequest,
@@ -26,6 +39,16 @@ export async function GET(
             pattern: true
           }
         },
+        companies: {
+          include: {
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
         submissions: {
           orderBy: { submittedAt: 'desc' },
           include: {
@@ -44,6 +67,9 @@ export async function GET(
 
     return NextResponse.json({
       ...problem,
+      company: problem.companies[0]?.company.name ?? null,
+      companies: problem.companies.map(entry => entry.company.name),
+      companyIds: problem.companies.map(entry => entry.company.id),
       tags: problem.tags.map(t => t.tag),
       patterns: problem.patterns.map(p => ({
         id: p.pattern.id,
@@ -77,7 +103,13 @@ export async function PUT(
       )
     }
 
-    const { title, difficulty, url, notes, source, company, tags, patterns } = body
+    const { title, difficulty, url, notes, source, companyIds, tags, patterns } = body
+
+    const shouldUpdateCompanies =
+      companyIds !== undefined
+    const resolvedCompanyIds = shouldUpdateCompanies
+      ? await resolveCompanyIds({ companyIds })
+      : null
 
     const problem = await prisma.problem.update({
       where: { id: problemId },
@@ -87,7 +119,16 @@ export async function PUT(
         ...(url !== undefined && { url }),
         ...(notes !== undefined && { notes }),
         ...(source && { source }),
-        ...(company !== undefined && { company }),
+        ...(shouldUpdateCompanies && {
+          companies: {
+            deleteMany: {},
+            create: resolvedCompanyIds!.map((id) => ({
+              company: {
+                connect: { id },
+              },
+            })),
+          },
+        }),
         ...(tags && {
           tags: {
             deleteMany: {},
@@ -107,12 +148,25 @@ export async function PUT(
           include: {
             pattern: true
           }
+        },
+        companies: {
+          include: {
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
         }
       }
     })
 
     return NextResponse.json({
       ...problem,
+      company: problem.companies[0]?.company.name ?? null,
+      companies: problem.companies.map(entry => entry.company.name),
+      companyIds: problem.companies.map(entry => entry.company.id),
       tags: problem.tags.map(t => t.tag),
       patterns: problem.patterns.map(p => ({
         id: p.pattern.id,

@@ -27,9 +27,7 @@ export async function GET(
                   include: {
                     pattern: true
                   }
-                },
-                company: true,
-                platform: true
+                }
               }
             }
           }

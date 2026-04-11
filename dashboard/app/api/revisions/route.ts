@@ -1,8 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 // Spaced Repetition intervals in days
 const REVISION_INTERVALS = [1, 3, 7, 14, 30, 60]
@@ -42,7 +40,6 @@ export async function GET(request: NextRequest) {
                 difficulty: true,
                 platform: true,
                 source: true,
-                company: true,
                 url: true,
                 patterns: {
                   include: {
@@ -79,7 +76,6 @@ export async function GET(request: NextRequest) {
                 difficulty: true,
                 platform: true,
                 source: true,
-                company: true,
                 url: true,
                 patterns: {
                   include: {
@@ -162,8 +158,8 @@ export async function POST(request: NextRequest) {
       const daysToAdd = REVISION_INTERVALS[level] ?? 1
       
       const reviewDate = new Date()
-      reviewDate.setUTCDate(reviewDate.getUTCDate() + daysToAdd)
-      reviewDate.setUTCHours(0, 0, 0, 0)
+      reviewDate.setHours(0, 0, 0, 0)
+      reviewDate.setDate(reviewDate.getDate() + daysToAdd)
       calculatedReviewDate = reviewDate
     }
 
@@ -219,8 +215,8 @@ export async function scheduleRevision(submissionId: number, wasSuccessful: bool
 
     // Calculate first revision date (1 day after solving)
     const reviewDate = new Date()
-    reviewDate.setUTCDate(reviewDate.getUTCDate() + 1)
-    reviewDate.setUTCHours(0, 0, 0, 0)
+    reviewDate.setHours(0, 0, 0, 0)
+    reviewDate.setDate(reviewDate.getDate() + 1)
 
     const revision = await prisma.revision.create({
       data: {

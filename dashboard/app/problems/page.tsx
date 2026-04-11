@@ -68,6 +68,8 @@ interface Problem {
   notes?: string;
   source?: string;
   company?: string;
+  companies?: string[];
+  companyIds?: number[];
   tags: string[];
   patterns: { id: number; name: string; category: string }[];
   submissions: {
@@ -88,58 +90,24 @@ interface Filters {
   difficulty: string;
   pattern: string;
   tag: string;
-  company: string;
+  companyId: string;
   status: string;
+}
+
+interface CompanyFilterOption {
+  id: number;
+  name: string;
+}
+
+interface FilterOptions {
+  patterns: string[];
+  tags: string[];
+  companyOptions: CompanyFilterOption[];
 }
 
 // Constants
 const ITEMS_PER_PAGE = 700;
 const TITLE_CLIP_LENGTH = 50;
-
-const COMPANIES = [
-  "Amazon",
-  "Google",
-  "Meta",
-  "Apple",
-  "Netflix",
-  "Microsoft",
-];
-
-const PATTERNS = [
-  "Two Pointers",
-  "Sliding Window",
-  "Binary Search",
-  "Stack",
-  "Linked List",
-  "Trees",
-  "Graphs",
-  "Heap / Priority Queue",
-  "Backtracking",
-  "Dynamic Programming",
-  "Greedy",
-  "Intervals",
-  "Math & Geometry",
-  "Bit Manipulation",
-  "Tries",
-];
-
-const TAGS = [
-  "Array",
-  "String",
-  "Hash Map",
-  "Binary Search",
-  "Dynamic Programming",
-  "Greedy",
-  "Backtracking",
-  "Graph",
-  "Tree",
-  "Heap",
-  "Stack",
-  "Queue",
-  "Linked List",
-  "Math",
-  "Bit Manipulation",
-];
 
 // Animation Variants
 const tableRowVariants = {
@@ -283,18 +251,48 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
 // Loading Skeleton
 function TableSkeleton() {
   return (
-    <div className="space-y-3">
-      {[...Array(5)].map((_, i) => (
-        <div key={i} className="flex items-center gap-4 p-4">
-          <Skeleton className="h-6 w-[200px]" />
-          <Skeleton className="h-6 w-[80px]" />
-          <Skeleton className="h-6 w-[120px]" />
-          <Skeleton className="h-6 w-[100px]" />
-          <Skeleton className="h-6 w-[80px]" />
-          <Skeleton className="h-6 w-[100px]" />
-          <Skeleton className="h-6 w-[60px]" />
+    <div className="space-y-4" aria-label="Loading problems list" aria-busy="true">
+      <div className="rounded-xl border border-purple-100/80 dark:border-purple-900/40 overflow-hidden">
+        <div className="grid grid-cols-[2.2fr_1fr_1.4fr_1.2fr_1fr_1fr_100px] gap-4 px-6 py-4 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-950/20 dark:to-pink-950/20">
+          {[...Array(7)].map((_, i) => (
+            <Skeleton key={`header-${i}`} className="h-4 w-full" />
+          ))}
         </div>
-      ))}
+
+        {[...Array(7)].map((_, i) => (
+          <div
+            key={`row-${i}`}
+            className="grid grid-cols-[2.2fr_1fr_1.4fr_1.2fr_1fr_1fr_100px] gap-4 px-6 py-4 border-t border-purple-100/60 dark:border-purple-900/30"
+          >
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-[85%]" />
+              <Skeleton className="h-3 w-[45%]" />
+            </div>
+            <Skeleton className="h-6 w-20 rounded-full" />
+            <div className="flex gap-2">
+              <Skeleton className="h-6 w-16 rounded-full" />
+              <Skeleton className="h-6 w-14 rounded-full" />
+            </div>
+            <Skeleton className="h-6 w-24 rounded-full" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+            <Skeleton className="h-4 w-20" />
+            <div className="flex justify-end gap-2">
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="h-8 w-8 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between px-2">
+        <Skeleton className="h-4 w-24" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-24 rounded-md" />
+          <Skeleton className="h-8 w-40 rounded-md" />
+          <Skeleton className="h-8 w-20 rounded-md" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -303,6 +301,11 @@ function TableSkeleton() {
 export default function ProblemsPage() {
   const router = useRouter();
   const [problems, setProblems] = useState<Problem[]>([]);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({
+    patterns: [],
+    tags: [],
+    companyOptions: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -316,7 +319,7 @@ export default function ProblemsPage() {
     difficulty: "",
     pattern: "",
     tag: "",
-    company: "",
+    companyId: "",
     status: "",
   });
 
@@ -324,11 +327,31 @@ export default function ProblemsPage() {
     const applySearchFromUrl = () => {
       const params = new URLSearchParams(window.location.search);
       const search = (params.get("search") || "").trim();
+      const difficulty = (params.get("difficulty") || "").trim();
+      const pattern = (params.get("pattern") || "").trim();
+      const tag = (params.get("tag") || "").trim();
+      const companyId = (params.get("companyId") || "").trim();
+      const status = (params.get("status") || "").trim();
       setFilters((prev) => {
-        if (prev.search === search) {
+        if (
+          prev.search === search &&
+          prev.difficulty === difficulty &&
+          prev.pattern === pattern &&
+          prev.tag === tag &&
+          prev.companyId === companyId &&
+          prev.status === status
+        ) {
           return prev;
         }
-        return { ...prev, search };
+        return {
+          ...prev,
+          search,
+          difficulty,
+          pattern,
+          tag,
+          companyId,
+          status,
+        };
       });
     };
 
@@ -348,6 +371,52 @@ export default function ProblemsPage() {
     };
   }, []);
 
+  const fetchFilterOptions = useCallback(async () => {
+    try {
+      const [problemFiltersResponse, companiesResponse] = await Promise.all([
+        fetch("/api/problems/filters"),
+        fetch("/api/companies"),
+      ]);
+
+      const problemFiltersData = problemFiltersResponse.ok
+        ? await problemFiltersResponse.json()
+        : null;
+      const companiesData = companiesResponse.ok ? await companiesResponse.json() : null;
+
+      const companyOptionsFromApi = Array.isArray(companiesData?.companies)
+        ? (companiesData.companies
+            .filter(
+              (value: unknown) =>
+                typeof value === "object" &&
+                value !== null &&
+                Number.isInteger((value as { id?: unknown }).id) &&
+                typeof (value as { name?: unknown }).name === "string"
+            )
+            .map((value) => ({
+              id: (value as { id: number }).id,
+              name: (value as { name: string }).name,
+            })) as CompanyFilterOption[])
+        : [];
+
+      setFilterOptions({
+        patterns: Array.isArray(problemFiltersData?.patterns)
+          ? problemFiltersData.patterns.filter((value: unknown) => typeof value === "string")
+          : [],
+        tags: Array.isArray(problemFiltersData?.tags)
+          ? problemFiltersData.tags.filter((value: unknown) => typeof value === "string")
+          : [],
+        companyOptions: companyOptionsFromApi,
+      });
+    } catch {
+      // Keep graceful fallback to runtime-derived options from loaded problems.
+      setFilterOptions({ patterns: [], tags: [], companyOptions: [] });
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchFilterOptions();
+  }, [fetchFilterOptions]);
+
   // Fetch problems from API
   const fetchProblems = useCallback(async () => {
     try {
@@ -359,10 +428,29 @@ export default function ProblemsPage() {
       if (filters.difficulty) params.append("difficulty", filters.difficulty);
       if (filters.pattern) params.append("pattern", filters.pattern);
       if (filters.tag) params.append("tag", filters.tag);
-      if (filters.company) params.append("company", filters.company);
+      if (filters.companyId) params.append("companyId", filters.companyId);
 
-      const response = await fetch(`/api/problems?${params.toString()}`);
-      if (!response.ok) throw new Error("Failed to fetch problems");
+      let response = await fetch(`/api/problems?${params.toString()}`);
+
+      // Defensive fallback: if a companyId-filtered request fails, retry once without companyId.
+      if (!response.ok && filters.companyId) {
+        const fallbackParams = new URLSearchParams(params);
+        fallbackParams.delete("companyId");
+        response = await fetch(`/api/problems?${fallbackParams.toString()}`);
+      }
+
+      if (!response.ok) {
+        let message = "Failed to fetch problems";
+        try {
+          const payload = await response.json();
+          if (typeof payload?.error === "string" && payload.error.trim().length > 0) {
+            message = payload.error;
+          }
+        } catch {
+          // Keep generic fallback message when response body is not JSON.
+        }
+        throw new Error(message);
+      }
 
       const data = await response.json();
       setProblems(data.problems || []);
@@ -371,7 +459,7 @@ export default function ProblemsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters.search, filters.difficulty, filters.pattern, filters.tag, filters.company]);
+  }, [filters.search, filters.difficulty, filters.pattern, filters.tag, filters.companyId]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(fetchProblems, 300);
@@ -390,6 +478,46 @@ export default function ProblemsPage() {
       return true;
     });
   }, [problems, filters.status]);
+
+  const derivedPatternOptions = useMemo(() => {
+    return Array.from(
+      new Set(problems.flatMap((problem) => problem.patterns.map((pattern) => pattern.name)))
+    ).sort((a, b) => a.localeCompare(b));
+  }, [problems]);
+
+  const derivedTagOptions = useMemo(() => {
+    return Array.from(new Set(problems.flatMap((problem) => problem.tags))).sort((a, b) =>
+      a.localeCompare(b)
+    );
+  }, [problems]);
+
+  const derivedCompanyOptions = useMemo<CompanyFilterOption[]>(() => {
+    const companyById = new Map<number, string>();
+
+    problems.forEach((problem) => {
+      const names = Array.isArray(problem.companies)
+        ? problem.companies
+        : typeof problem.company === "string" && problem.company.trim().length > 0
+          ? [problem.company]
+          : [];
+
+      (problem.companyIds || []).forEach((id, index) => {
+        if (!Number.isInteger(id) || id <= 0 || companyById.has(id)) return;
+        const name = names[index] || names[0];
+        if (typeof name === "string" && name.trim().length > 0) {
+          companyById.set(id, name);
+        }
+      });
+    });
+
+    return Array.from(companyById.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [problems]);
+
+  const patternOptions = filterOptions.patterns.length > 0 ? filterOptions.patterns : derivedPatternOptions;
+  const tagOptions = filterOptions.tags.length > 0 ? filterOptions.tags : derivedTagOptions;
+  const companyOptions = filterOptions.companyOptions.length > 0 ? filterOptions.companyOptions : derivedCompanyOptions;
 
   // Pagination
   const totalPages = Math.ceil(filteredProblems.length / ITEMS_PER_PAGE);
@@ -415,7 +543,7 @@ export default function ProblemsPage() {
       difficulty: "",
       pattern: "",
       tag: "",
-      company: "",
+      companyId: "",
       status: "",
     });
     router.replace("/problems");
@@ -626,7 +754,7 @@ export default function ProblemsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Patterns</SelectItem>
-                    {PATTERNS.map((pattern) => (
+                    {patternOptions.map((pattern) => (
                       <SelectItem key={pattern} value={pattern}>
                         {pattern}
                       </SelectItem>
@@ -638,17 +766,17 @@ export default function ProblemsPage() {
               {/* Company Select */}
               <div className="flex-1">
                 <Select
-                  value={filters.company || "all"}
-                  onValueChange={(value) => updateFilter("company", value === "all" ? "" : value)}
+                  value={filters.companyId || "all"}
+                  onValueChange={(value) => updateFilter("companyId", value === "all" ? "" : value)}
                 >
                   <SelectTrigger className="w-full bg-white/70 dark:bg-gray-900/50 border-purple-200 dark:border-purple-800/50">
                     <SelectValue placeholder="Company" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Companies</SelectItem>
-                    {COMPANIES.map((company) => (
-                      <SelectItem key={company} value={company}>
-                        {company}
+                    {companyOptions.map((company) => (
+                      <SelectItem key={company.id} value={String(company.id)}>
+                        {company.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -666,7 +794,7 @@ export default function ProblemsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Tags</SelectItem>
-                    {TAGS.map((tag) => (
+                    {tagOptions.map((tag) => (
                       <SelectItem key={tag} value={tag}>
                         {tag}
                       </SelectItem>
@@ -869,18 +997,43 @@ export default function ProblemsPage() {
                             )}
                           </TableCell>
                           <TableCell className="px-6">
-                            {problem.company ? (
-                              <Badge
-                                variant="outline"
-                                className="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800"
-                              >
-                                {problem.company}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">
-                                —
-                              </span>
-                            )}
+                            {(() => {
+                              const companyNames = Array.isArray(problem.companies)
+                                ? problem.companies
+                                : typeof problem.company === "string" && problem.company.trim().length > 0
+                                  ? [problem.company]
+                                  : [];
+
+                              if (companyNames.length === 0) {
+                                return (
+                                  <span className="text-muted-foreground text-sm">
+                                    —
+                                  </span>
+                                );
+                              }
+
+                              return (
+                                <div className="flex flex-wrap gap-1">
+                                  {companyNames.slice(0, 2).map((companyName) => (
+                                    <Badge
+                                      key={companyName}
+                                      variant="outline"
+                                      className="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800"
+                                    >
+                                      {companyName}
+                                    </Badge>
+                                  ))}
+                                  {companyNames.length > 2 && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      +{companyNames.length - 2}
+                                    </Badge>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="px-6">
                             <StatusBadge

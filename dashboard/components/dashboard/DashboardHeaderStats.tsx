@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { BarChart3, Clock, Flame, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { staggerContainer, staggerItem } from "@/lib/animations";
+import { DashboardHeaderStatsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 interface DashboardHeaderStatsData {
   totalProblemsSolved: number;
@@ -61,23 +61,7 @@ export function DashboardHeaderStats() {
   }, []);
 
   if (loading || !data) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((idx) => (
-          <Card key={idx} className="border-2">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-8 w-24" />
-                </div>
-                <Skeleton className="h-12 w-12 rounded-xl" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
+    return <DashboardHeaderStatsSkeleton />;
   }
 
   return (

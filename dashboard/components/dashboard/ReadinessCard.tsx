@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Target, AlertCircle, Zap, Award } from "lucide-react";
+import { Gauge, AlertCircle, Zap, Award } from "lucide-react";
 import { fadeInUp } from "@/lib/animations";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { GlassCard } from "@/components/ui/glass-card";
+import { DashboardMainCardSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 interface ReadinessData {
   score: number;
@@ -46,22 +46,7 @@ export function ReadinessCard() {
   }, []);
 
   if (loading) {
-    return (
-      <GlassCard variant="default" className="min-h-[400px] bg-white/80">
-        <CardHeader>
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-32" />
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Skeleton className="h-40 w-40 rounded-full mx-auto" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-          <Skeleton className="h-20 w-full" />
-        </CardContent>
-      </GlassCard>
-    );
+    return <DashboardMainCardSkeleton rows={4} />;
   }
 
   if (error || !data) {
@@ -129,16 +114,16 @@ export function ReadinessCard() {
 
         {/* Header */}
         <CardHeader className="relative pb-4">
-          <CardTitle className="flex items-center gap-3 text-xl font-bold">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-purple-pink">
-              <Target className="h-6 w-6 text-white" />
+          <CardTitle className="-ml-6 flex items-center gap-3 text-xl font-bold">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-purple-pink">
+              <Gauge className="h-6 w-6 text-white" />
             </div>
             <div>
               <span className="text-gradient-purple-pink text-xl">
                 Interview Readiness
               </span>
               <p className="text-sm text-muted-foreground font-normal mt-1">
-                Your interview preparation score
+                Overall readiness score from your recent practice
               </p>
             </div>
           </CardTitle>

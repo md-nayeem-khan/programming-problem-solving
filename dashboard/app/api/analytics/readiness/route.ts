@@ -7,13 +7,22 @@ import { calculateReadinessScore } from '@/types'
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const company = searchParams.get('company') // Optional filter by company
+    const companyIdParam = searchParams.get('companyId')
     const source = searchParams.get('source') // Optional filter by source
     const timeframe = searchParams.get('timeframe') // 'week', 'month', 'all'
 
     // Build where clause for filtering
     const problemWhere: any = {}
-    if (company) problemWhere.company = company
+    const companyId = companyIdParam ? Number(companyIdParam) : null
+    const hasValidCompanyId = Number.isInteger(companyId) && (companyId as number) > 0
+
+    if (hasValidCompanyId) {
+      problemWhere.companies = {
+        some: {
+          companyId,
+        },
+      }
+    }
     if (source) problemWhere.source = source
 
     // Build date filter for timeframe
@@ -42,7 +51,6 @@ export async function GET(request: NextRequest) {
           select: {
             difficulty: true,
             source: true,
-            company: true,
             title: true,
             platform: true,
             problemId: true,
@@ -145,7 +153,8 @@ export async function GET(request: NextRequest) {
     }
 
     const onPaceProblems = solvedSubmissions.filter(s => {
-      const benchmark = TIME_BENCHMARKS[s.problem.difficulty as keyof typeof TIME_BENCHMARKS]
+      const difficultyKey = s.problem.difficulty?.toLowerCase() as keyof typeof TIME_BENCHMARKS
+      const benchmark = TIME_BENCHMARKS[difficultyKey]
       return benchmark && s.timeSpentSeconds <= benchmark
     }).length
 

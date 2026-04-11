@@ -3,10 +3,7 @@
 import { motion } from "framer-motion";
 import { ReadinessCard } from "@/components/dashboard/ReadinessCard";
 import { DailyProgressCard } from "@/components/dashboard/DailyProgressCard";
-import { PatternStrengthCard } from "@/components/dashboard/PatternStrengthCard";
-import { WeakAreasCard } from "@/components/dashboard/WeakAreasCard";
 import { TimePerformanceCard } from "@/components/dashboard/TimePerformanceCard";
-import { CompanyReadinessCard } from "@/components/dashboard/CompanyReadinessCard";
 import { AnalyticsHighlightsCard } from "@/components/dashboard/AnalyticsHighlightsCard";
 import { DashboardHeaderStats } from "@/components/dashboard/DashboardHeaderStats";
 import { staggerContainer, staggerItem } from "@/lib/animations";
@@ -58,95 +55,51 @@ export default function DashboardPage() {
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 xl:grid-cols-2 gap-8"
+          className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-stretch"
         >
           {/* Row 1: Readiness Score & Daily Progress */}
           <motion.div
             variants={staggerItem}
-            className="xl:col-span-1"
+            className="xl:col-span-1 h-full"
           >
             <motion.div
               variants={cardHoverVariants}
               initial="rest"
               whileHover="hover"
               whileTap={{ scale: 0.98 }}
-              className="cursor-pointer"
+              className="cursor-pointer h-full"
             >
               <ReadinessCard />
             </motion.div>
           </motion.div>
           <motion.div
             variants={staggerItem}
-            className="xl:col-span-1"
+            className="xl:col-span-1 h-full"
           >
             <motion.div
               variants={cardHoverVariants}
               initial="rest"
               whileHover="hover"
               whileTap={{ scale: 0.98 }}
-              className="cursor-pointer"
+              className="cursor-pointer h-full"
             >
               <DailyProgressCard />
             </motion.div>
           </motion.div>
 
-          {/* Row 2: Time Performance & Weak Areas */}
+          {/* Row 2: Time Performance */}
           <motion.div
             variants={staggerItem}
-            className="xl:col-span-1"
+            className="xl:col-span-1 h-full"
           >
             <motion.div
               variants={cardHoverVariants}
               initial="rest"
               whileHover="hover"
               whileTap={{ scale: 0.98 }}
-              className="cursor-pointer"
+              className="cursor-pointer h-full"
             >
               <TimePerformanceCard />
-            </motion.div>
-          </motion.div>
-          <motion.div
-            variants={staggerItem}
-            className="xl:col-span-1"
-          >
-            <motion.div
-              variants={cardHoverVariants}
-              initial="rest"
-              whileHover="hover"
-              whileTap={{ scale: 0.98 }}
-              className="cursor-pointer"
-            >
-              <WeakAreasCard />
-            </motion.div>
-          </motion.div>
-
-          {/* Row 3: Pattern Strength & Company Readiness */}
-          <motion.div
-            variants={staggerItem}
-            className="xl:col-span-1"
-          >
-            <motion.div
-              variants={cardHoverVariants}
-              initial="rest"
-              whileHover="hover"
-              whileTap={{ scale: 0.98 }}
-              className="cursor-pointer"
-            >
-              <PatternStrengthCard />
-            </motion.div>
-          </motion.div>
-          <motion.div
-            variants={staggerItem}
-            className="xl:col-span-1"
-          >
-            <motion.div
-              variants={cardHoverVariants}
-              initial="rest"
-              whileHover="hover"
-              whileTap={{ scale: 0.98 }}
-              className="cursor-pointer"
-            >
-              <CompanyReadinessCard />
             </motion.div>
           </motion.div>
 

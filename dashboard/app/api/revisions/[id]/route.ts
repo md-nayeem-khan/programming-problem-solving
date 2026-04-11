@@ -29,7 +29,6 @@ export async function GET(
                 difficulty: true,
                 platform: true,
                 source: true,
-                company: true,
                 url: true
               }
             }

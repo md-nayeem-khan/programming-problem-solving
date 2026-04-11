@@ -38,6 +38,15 @@ export async function GET() {
         },
         include: {
           tags: true,
+          companies: {
+            include: {
+              company: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
           patterns: {
             include: {
               pattern: true,
@@ -63,7 +72,15 @@ export async function GET() {
               problemId: true,
               difficulty: true,
               source: true,
-              company: true,
+              companies: {
+                select: {
+                  company: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -98,13 +115,14 @@ export async function GET() {
 
       const patternNames = problem.patterns.map((entry) => entry.pattern.name);
       const tags = problem.tags.map((tag) => tag.tag);
+      const companyNames = problem.companies.map((entry) => entry.company.name);
 
       lines.push(`Problem #${index + 1}`);
       lines.push(`Title: ${problem.title}`);
       lines.push(`Platform: ${problem.platform}`);
       lines.push(`Problem ID: ${problem.problemId}`);
       lines.push(`Difficulty: ${problem.difficulty}`);
-      lines.push(`Source: ${problem.source}${problem.company ? ` (${problem.company})` : ""}`);
+      lines.push(`Source: ${problem.source}${companyNames.length > 0 ? ` (${companyNames.join(', ')})` : ""}`);
       lines.push(`URL: ${problem.url || "N/A"}`);
       lines.push(`Tags: ${tags.length > 0 ? tags.join(", ") : "None"}`);
       lines.push(`Patterns: ${patternNames.length > 0 ? patternNames.join(", ") : "None"}`);
@@ -155,7 +173,8 @@ export async function GET() {
       lines.push(`Problem ID: ${mock.problem.problemId}`);
       lines.push(`Platform: ${mock.problem.platform}`);
       lines.push(`Difficulty: ${mock.problem.difficulty}`);
-      lines.push(`Source: ${mock.problem.source}${mock.problem.company ? ` (${mock.problem.company})` : ""}`);
+      const mockCompanyNames = mock.problem.companies.map((entry) => entry.company.name);
+      lines.push(`Source: ${mock.problem.source}${mockCompanyNames.length > 0 ? ` (${mockCompanyNames.join(', ')})` : ""}`);
       lines.push(`Time Limit: ${formatSeconds(mock.timeLimit)}`);
       lines.push(`Time Taken: ${formatSeconds(mock.timeTakenSeconds)}`);
       lines.push(`Pattern Recognition Time: ${formatSeconds(mock.patternRecognitionSeconds)}`);

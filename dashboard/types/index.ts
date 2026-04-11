@@ -217,6 +217,7 @@ export interface PatternStats {
   hintUsageRate: number;
   confidence: Confidence;
   problemIds: number[];
+  solvedProblemIds?: number[];
 }
 
 export interface ReadinessScore {

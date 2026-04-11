@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { calculateDailyProgressSnapshot } from '@/lib/analytics/daily-progress-metrics'
+import { calculateCurrentStreakFromSolvedDays, calculateLongestStreakFromSolvedDays, toDateKey } from '@/lib/analytics/streak-metrics'
 
 // Helper function to normalize date to start of day (UTC)
 function normalizeDate(date: Date): Date {
@@ -15,66 +17,21 @@ function calculateStreaks(dailyProgress: Array<{ date: Date; problemsSolved: num
     return { currentStreak: 0, longestStreak: 0, isActiveToday: false }
   }
 
-  // Sort by date descending (most recent first)
-  const sortedDays = dailyProgress
-    .filter(day => day.problemsSolved > 0)
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
+  const solvedDayKeys = new Set(
+    dailyProgress
+      .filter(day => day.problemsSolved > 0)
+      .map(day => toDateKey(day.date))
+  )
 
-  if (sortedDays.length === 0) {
+  if (solvedDayKeys.size === 0) {
     return { currentStreak: 0, longestStreak: 0, isActiveToday: false }
   }
 
-  const today = normalizeDate(new Date())
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  // Check if active today
-  const isActiveToday = sortedDays.some(day => 
-    normalizeDate(day.date).getTime() === today.getTime()
-  )
-
-  // Calculate current streak
-  let currentStreak = 0
-  let currentDate = isActiveToday ? today : yesterday
-
-  for (let i = 0; i < sortedDays.length; i++) {
-    const dayDate = normalizeDate(sortedDays[i].date)
-    
-    if (dayDate.getTime() === currentDate.getTime()) {
-      currentStreak++
-      currentDate.setDate(currentDate.getDate() - 1)
-    } else if (dayDate.getTime() < currentDate.getTime()) {
-      // Gap found, streak ends
-      break
-    }
-  }
-
-  // Calculate longest streak
-  let longestStreak = 0
-  let tempStreak = 0
-  let tempDate: Date | null = null
-
-  for (let i = sortedDays.length - 1; i >= 0; i--) {
-    const dayDate = normalizeDate(sortedDays[i].date)
-    
-    if (tempDate === null) {
-      tempStreak = 1
-      tempDate = new Date(dayDate)
-    } else {
-      const expectedDate = new Date(tempDate)
-      expectedDate.setDate(expectedDate.getDate() + 1)
-      
-      if (dayDate.getTime() === expectedDate.getTime()) {
-        tempStreak++
-        tempDate = dayDate
-      } else {
-        longestStreak = Math.max(longestStreak, tempStreak)
-        tempStreak = 1
-        tempDate = dayDate
-      }
-    }
-  }
-  longestStreak = Math.max(longestStreak, tempStreak)
+  const now = new Date()
+  const todayKey = toDateKey(now)
+  const isActiveToday = solvedDayKeys.has(todayKey)
+  const currentStreak = calculateCurrentStreakFromSolvedDays(solvedDayKeys, now)
+  const longestStreak = calculateLongestStreakFromSolvedDays(solvedDayKeys)
 
   return { currentStreak, longestStreak, isActiveToday }
 }
@@ -373,18 +330,7 @@ export async function PUT(request: NextRequest) {
     for (const [dateKey, daySubmissions] of submissionsByDate.entries()) {
       const date = new Date(dateKey)
       
-      // Calculate metrics for this day
-      const problemsSolved = daySubmissions.filter(s => s.status === 'solved').length
-      const totalTimeSpent = daySubmissions.reduce((sum, s) => sum + s.timeSpentSeconds, 0)
-      
-      // Count unique patterns worked on
-      const patternsSet = new Set<string>()
-      daySubmissions.forEach(submission => {
-        submission.problem.patterns.forEach((pp: any) => {
-          patternsSet.add(pp.pattern.name)
-        })
-      })
-      const patternsWorked = patternsSet.size
+      const dailySnapshot = calculateDailyProgressSnapshot(daySubmissions)
 
       // Mock interviews would need separate tracking
       const mockInterviews = 0 // TODO: Implement when mock interview model is added
@@ -393,16 +339,16 @@ export async function PUT(request: NextRequest) {
       const updatedProgress = await prisma.dailyProgress.upsert({
         where: { date: normalizeDate(date) },
         update: {
-          problemsSolved,
-          totalTimeSpent,
-          patternsWorked,
+          problemsSolved: dailySnapshot.problemsSolved,
+          totalTimeSpent: dailySnapshot.totalTimeSpent,
+          patternsWorked: dailySnapshot.patternsWorked,
           mockInterviews
         },
         create: {
           date: normalizeDate(date),
-          problemsSolved,
-          totalTimeSpent,
-          patternsWorked,
+          problemsSolved: dailySnapshot.problemsSolved,
+          totalTimeSpent: dailySnapshot.totalTimeSpent,
+          patternsWorked: dailySnapshot.patternsWorked,
           mockInterviews
         }
       })

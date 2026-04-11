@@ -236,57 +236,63 @@ export async function GET(request: Request) {
     }
 
     // 5. Company-specific recommendations (LOW PRIORITY)
-    const companyCounts = await prisma.problem.groupBy({
-      by: ['company'],
-      where: {
-        company: {
-          not: null
-        }
+    const companies = await prisma.companyCard.findMany({
+      select: {
+        name: true,
       },
-      _count: true
     })
 
-    const solvedByCompany = await prisma.problem.groupBy({
-      by: ['company'],
-      where: {
-        company: {
-          not: null
+    for (const company of companies) {
+      const total = await prisma.problem.count({
+        where: {
+          companies: {
+            some: {
+              company: {
+                name: company.name,
+              },
+            },
+          },
         },
-        submissions: {
-          some: {
-            status: 'solved'
+      })
+
+      if (total < 5) continue
+
+      const solved = await prisma.problem.count({
+        where: {
+          companies: {
+            some: {
+              company: {
+                name: company.name,
+              },
+            },
+          },
+          submissions: {
+            some: {
+              status: 'solved',
+            },
+          },
+        },
+      })
+
+      const percentage = (solved / total) * 100
+
+      if (percentage < 70) {
+        recommendations.push({
+          id: `company-${company.name}`,
+          type: 'company',
+          title: `${company.name} Interview Prep`,
+          description: `You've solved ${solved}/${total} ${company.name} problems (${Math.round(percentage)}%). Aim for 70%+ for interview readiness.`,
+          priority: 'low',
+          action: `Practice ${company.name} problems`,
+          metadata: {
+            company: company.name,
+            solved,
+            total,
+            percentage
           }
-        }
-      },
-      _count: true
-    })
-
-    const companyMap = new Map(solvedByCompany.map(c => [c.company, c._count]))
-
-    companyCounts.forEach(c => {
-      if (c.company) {
-        const total = c._count
-        const solved = companyMap.get(c.company) || 0
-        const percentage = (solved / total) * 100
-
-        if (percentage < 70 && total >= 5) {
-          recommendations.push({
-            id: `company-${c.company}`,
-            type: 'company',
-            title: `${c.company} Interview Prep`,
-            description: `You've solved ${solved}/${total} ${c.company} problems (${Math.round(percentage)}%). Aim for 70%+ for interview readiness.`,
-            priority: 'low',
-            action: `Practice ${c.company} problems`,
-            metadata: {
-              company: c.company,
-              solved,
-              total,
-              percentage
-            }
-          })
-        }
+        })
       }
-    })
+    }
 
     // 6. Daily variety recommendation (LOW PRIORITY)
     const today = new Date()

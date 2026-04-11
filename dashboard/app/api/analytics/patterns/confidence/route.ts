@@ -1,7 +1,8 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { calculatePatternConfidence, type Confidence, type PatternStats } from '@/types'
+import { type PatternStats } from '@/types'
+import { calculatePatternMetrics } from '@/lib/analytics/pattern-metrics'
 
 // GET /api/analytics/patterns/confidence - Calculate pattern confidence levels
 export async function GET(request: NextRequest) {
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const minProblems = parseInt(searchParams.get('minProblems') || '1')
     const timeframe = searchParams.get('timeframe') // 'week', 'month', 'all'
-    const company = searchParams.get('company') // Optional filter by company
+    const companyIdParam = searchParams.get('companyId')
     const source = searchParams.get('source') // Optional filter by source
 
     // Build date filter for timeframe
@@ -26,95 +27,68 @@ export async function GET(request: NextRequest) {
 
     // Build problem filter
     const problemWhere: any = {}
-    if (company) problemWhere.company = company
+    const companyId = companyIdParam ? Number(companyIdParam) : null
+    const hasValidCompanyId = Number.isInteger(companyId) && (companyId as number) > 0
+
+    if (hasValidCompanyId) {
+      problemWhere.companies = {
+        some: {
+          companyId,
+        },
+      }
+    }
     if (source) problemWhere.source = source
 
-    // Combine filters
-    const where = {
-      ...submissionWhere,
-      ...(Object.keys(problemWhere).length > 0 ? { problem: problemWhere } : {})
-    }
-
-    // Get all submissions with problem and pattern relationships
-    const submissions = await prisma.submission.findMany({
-      where,
+    // Get all matching problems and their submissions/pattern relations.
+    const problems = await prisma.problem.findMany({
+      where: Object.keys(problemWhere).length > 0 ? problemWhere : undefined,
       include: {
-        problem: {
+        patterns: {
           include: {
-            patterns: {
-              include: {
-                pattern: true
-              }
-            }
+            pattern: true
+          }
+        },
+        submissions: {
+          where: submissionWhere
+        }
+      }
+    })
+
+    // Include all known patterns for selected problems, even if they have 0 solved submissions.
+    const allPatternsInScope = await prisma.pattern.findMany({
+      where: {
+        problems: {
+          some: {
+            problem: Object.keys(problemWhere).length > 0 ? problemWhere : undefined
           }
         }
       }
     })
 
-    // Group submissions by pattern
-    const patternMap = new Map<string, {
-      pattern: { id: number; name: string; category: string };
-      submissions: any[];
-      problemIds: Set<number>;
-    }>()
+    const calculatedStats = calculatePatternMetrics(problems as any[], minProblems)
 
-    submissions.forEach(submission => {
-      submission.problem.patterns.forEach(problemPattern => {
-        const pattern = problemPattern.pattern
-        const key = pattern.name
-
-        if (!patternMap.has(key)) {
-          patternMap.set(key, {
-            pattern,
-            submissions: [],
-            problemIds: new Set()
-          })
-        }
-
-        const patternData = patternMap.get(key)!
-        patternData.submissions.push(submission)
-        patternData.problemIds.add(submission.problemId)
+    const patternStatsByName = new Map(calculatedStats.map((stat) => [stat.pattern, stat]))
+    const patternStats: PatternStats[] = allPatternsInScope
+      .filter((pattern) => {
+        const scopedProblemCount = problems.filter((problem) =>
+          problem.patterns.some((pp) => pp.pattern.name === pattern.name)
+        ).length
+        return scopedProblemCount >= minProblems
       })
-    })
+      .map((pattern) => {
+        const calculated = patternStatsByName.get(pattern.name)
 
-    // Calculate statistics for each pattern
-    const patternStats: PatternStats[] = []
-
-    patternMap.forEach((data, patternName) => {
-      const { pattern, submissions: patternSubmissions, problemIds } = data
-      
-      // Only include patterns with minimum problems
-      if (problemIds.size < minProblems) return
-
-      // Calculate metrics
-      const solvedSubmissions = patternSubmissions.filter(s => s.status === 'solved')
-      const totalSolved = solvedSubmissions.length
-      
-      if (totalSolved === 0) return // Skip patterns with no solved problems
-
-      // Average time calculation
-      const totalTime = solvedSubmissions.reduce((sum, s) => sum + s.timeSpentSeconds, 0)
-      const avgTimeSeconds = totalTime / totalSolved
-
-      // Hint usage rate calculation
-      const hintsUsed = solvedSubmissions.filter(s => s.wasHintUsed).length
-      const hintUsageRate = hintsUsed / totalSolved
-
-      // Calculate confidence level
-      const confidence = calculatePatternConfidence(avgTimeSeconds, hintUsageRate)
-
-      const stats: PatternStats = {
-        pattern: pattern.name,
-        category: pattern.category,
-        totalSolved,
-        avgTimeSeconds,
-        hintUsageRate,
-        confidence,
-        problemIds: Array.from(problemIds)
-      }
-
-      patternStats.push(stats)
-    })
+        return {
+          pattern: pattern.name,
+          category: pattern.category,
+          totalSolved: calculated?.totalSolved ?? 0,
+          avgTimeSeconds: calculated?.avgTimeSeconds ?? 0,
+          hintUsageRate: calculated?.hintUsageRate ?? 0,
+          confidence: calculated?.confidence ?? 'Weak',
+          problemIds: calculated?.problemIds ?? [],
+          solvedProblemIds: calculated?.solvedProblemIds ?? [],
+        }
+      })
 
     // Sort by confidence (weak patterns first) and then by total problems
     patternStats.sort((a, b) => {

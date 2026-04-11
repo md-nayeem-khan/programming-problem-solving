@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DashboardMainCardSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import {
   BarChart,
   Bar,
@@ -34,32 +34,21 @@ export function AnalyticsHighlightsCard() {
   useEffect(() => {
     async function fetchHighlights() {
       try {
-        const streakRes = await fetch("/api/analytics/streak?days=30");
+        const progressRes = await fetch("/api/analytics/daily-progress?days=30");
 
-        if (!streakRes.ok) {
+        if (!progressRes.ok) {
           throw new Error("Failed to fetch analytics highlights");
         }
 
-        const streak = await streakRes.json();
+        const progress = await progressRes.json();
+        const rows = Array.isArray(progress.data) ? progress.data : [];
 
-        const progressMap = new Map<string, number>();
-        const calendarData = Array.isArray(streak.calendarData) ? streak.calendarData : [];
-
-        calendarData.forEach((day: any) => {
-          if (day?.date) {
-            progressMap.set(day.date, day.count || 0);
-          }
-        });
-
-        const thirtyDayProgress = Array.from({ length: 30 }, (_, idx) => {
-          const d = new Date();
-          d.setDate(d.getDate() - (29 - idx));
-          const dateKey = d.toISOString().split("T")[0];
-
+        const thirtyDayProgress = rows.map((day: any) => {
+          const dateObj = new Date(day.date);
           return {
-            date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-            problems: progressMap.get(dateKey) || 0,
-            timeSpent: 0,
+            date: dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            problems: day.problemsSolved || 0,
+            timeSpent: Math.round((((day.totalTimeMinutes || 0) / 60) * 10)) / 10,
           };
         });
 
@@ -77,18 +66,7 @@ export function AnalyticsHighlightsCard() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-[300px] w-full" />
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <DashboardMainCardSkeleton rows={1} />;
   }
 
   if (error || !data) {

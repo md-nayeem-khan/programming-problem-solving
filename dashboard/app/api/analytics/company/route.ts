@@ -1,7 +1,13 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { calculateReadinessScore, COMPANIES, type CompanyReadiness } from '@/types'
+import { calculateReadinessScore, type CompanyReadiness } from '@/types'
+
+function normalizeCompanyName(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
 
 // GET /api/analytics/company - Get overview of all companies' readiness
 export async function GET(request: NextRequest) {
@@ -21,12 +27,66 @@ export async function GET(request: NextRequest) {
       submissionWhere.submittedAt = { gte: monthAgo }
     }
 
+    const companyCards = await prisma.companyCard.findMany({
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+      },
+    })
+
+    const companyNames = Array.from(
+      new Set(
+        [
+          ...companyCards.map((row) => normalizeCompanyName(row.name))
+        ].filter((name): name is string => Boolean(name))
+      )
+    )
+
+    if (companyNames.length === 0) {
+      return NextResponse.json({
+        companies: [],
+        summary: {
+          totalCompanies: 0,
+          readyCompanies: 0,
+          avgReadinessScore: 0,
+          totalProblems: 0,
+          totalSolved: 0,
+          mostReady: null,
+          mostActive: null,
+          bestCovered: null
+        },
+        insights: {
+          strongestCompany: null,
+          weakestArea: null,
+          improvementOpportunity: null,
+          totalCoverageRate: 0
+        },
+        recommendations: [
+          'Add company-tagged problems to start company readiness tracking'
+        ]
+      })
+    }
+
     // Get all companies' data in parallel
     const companyData = await Promise.all(
-      COMPANIES.map(async (company) => {
+      companyNames.map(async (company) => {
         const problems = await prisma.problem.findMany({
-          where: { company },
+          where: {
+            companies: {
+              some: {
+                company: {
+                  name: company,
+                },
+              },
+            },
+          },
           include: {
+            patterns: {
+              include: {
+                pattern: true
+              }
+            },
             submissions: {
               where: submissionWhere,
               orderBy: { submittedAt: 'desc' }
@@ -55,6 +115,27 @@ export async function GET(request: NextRequest) {
           ? solvedSubmissions.reduce((sum: number, s: any) => sum + s.timeSpentSeconds, 0) / solvedSubmissions.length
           : 0
 
+        const patternFrequency = new Map<string, number>()
+        problems.forEach((problem: any) => {
+          problem.patterns.forEach((problemPattern: any) => {
+            const patternName = problemPattern.pattern.name
+            patternFrequency.set(patternName, (patternFrequency.get(patternName) ?? 0) + 1)
+          })
+        })
+
+        const topPatterns = [...patternFrequency.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([name]) => name)
+
+        const difficulty = problems.reduce((acc: any, problem: any) => {
+          const key = String(problem.difficulty).toLowerCase()
+          if (key === 'easy' || key === 'medium' || key === 'hard') {
+            acc[key] += 1
+          }
+          return acc
+        }, { easy: 0, medium: 0, hard: 0 })
+
         const companyReadiness: CompanyReadiness = {
           company,
           problemsSolved: solvedProblems,
@@ -66,6 +147,8 @@ export async function GET(request: NextRequest) {
 
         return {
           ...companyReadiness,
+          topPatterns,
+          difficulty,
           coverageRate: totalProblems > 0 ? solvedProblems / totalProblems : 0,
           recentActivity: allSubmissions.filter((s: any) => {
             const weekAgo = new Date()
@@ -81,15 +164,19 @@ export async function GET(request: NextRequest) {
 
     // Calculate overall statistics
     const totalUniqueProblems = await prisma.problem.count({
-      where: { company: { not: null } }
+      where: {
+        companies: { some: {} },
+      }
     })
 
     const totalSolved = companyData.reduce((sum, company) => sum + company.problemsSolved, 0)
-    const avgReadiness = companyData.reduce((sum, company) => sum + company.readinessScore, 0) / companyData.length
+    const avgReadiness = companyData.length > 0
+      ? companyData.reduce((sum, company) => sum + company.readinessScore, 0) / companyData.length
+      : 0
 
     const readyCompanies = companyData.filter(c => c.isReady)
-    const mostActive = companyData.sort((a, b) => b.recentActivity - a.recentActivity)[0]
-    const bestCovered = companyData.sort((a, b) => b.coverageRate - a.coverageRate)[0]
+    const mostActive = [...companyData].sort((a, b) => b.recentActivity - a.recentActivity)[0]
+    const bestCovered = [...companyData].sort((a, b) => b.coverageRate - a.coverageRate)[0]
 
     // Generate recommendations
     const recommendations = []
@@ -119,7 +206,7 @@ export async function GET(request: NextRequest) {
     const response = {
       companies: companyData,
       summary: {
-        totalCompanies: COMPANIES.length,
+        totalCompanies: companyData.length,
         readyCompanies: readyCompanies.length,
         avgReadinessScore: Math.round(avgReadiness * 100) / 100,
         totalProblems: companyData.reduce((sum, c) => sum + c.totalProblems, 0),

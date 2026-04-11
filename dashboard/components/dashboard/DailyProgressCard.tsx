@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, Clock, CheckCircle2, AlertCircle, Target, Award, Star } from "lucide-react";
+import { CalendarCheck2, Clock, CheckCircle2, AlertCircle, Target, Award, Star } from "lucide-react";
 import { fadeInUp, springBounce, goalCelebration, achievementBadge } from "@/lib/animations";
 import { GlassCard } from "@/components/ui/glass-card";
 import { AnimatedCounter, CountUpStats } from "@/components/ui/animated-counter";
 import { ProgressRing } from "@/components/ui/progress-ring";
+import { DashboardMainCardSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 interface DailyProgressData {
   problemsSolved: number;
@@ -26,26 +26,18 @@ export function DailyProgressCard() {
   useEffect(() => {
     async function fetchDailyProgress() {
       try {
-        const [statsRes, streakRes] = await Promise.all([
-          fetch("/api/analytics/stats"),
-          fetch("/api/analytics/streak?days=30"),
-        ]);
+        const response = await fetch("/api/analytics/daily-progress?days=1&streak=true");
 
-        if (!statsRes.ok || !streakRes.ok) {
+        if (!response.ok) {
           throw new Error("Failed to fetch daily progress");
         }
 
-        await statsRes.json();
-        const streak = await streakRes.json();
-
-        const today = new Date().toISOString().split("T")[0];
-        const todayActivity = streak.calendar?.find((day: any) => 
-          day.date.startsWith(today)
-        );
+        const result = await response.json();
+        const todayActivity = Array.isArray(result.data) ? result.data[0] : null;
 
         const progressData = {
-          problemsSolved: todayActivity?.count || 0,
-          timeSpentHours: todayActivity?.totalTime ? todayActivity.totalTime / 3600 : 0,
+          problemsSolved: todayActivity?.problemsSolved || 0,
+          timeSpentHours: (todayActivity?.totalTimeMinutes || 0) / 60,
           dailyGoal: 2,
         };
 
@@ -66,22 +58,7 @@ export function DailyProgressCard() {
   }, []);
 
   if (loading) {
-    return (
-      <GlassCard variant="default" className="min-h-[400px] bg-white/80">
-        <CardHeader>
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-4 w-48" />
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </CardContent>
-      </GlassCard>
-    );
+    return <DashboardMainCardSkeleton rows={4} />;
   }
 
   if (error || !data) {
@@ -122,16 +99,16 @@ export function DailyProgressCard() {
 
         {/* Header */}
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-3 text-xl font-bold">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-blue-cyan">
-              <Calendar className="h-6 w-6 text-white" />
+          <CardTitle className="-ml-6 flex items-center gap-3 text-xl font-bold">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-blue-cyan">
+              <CalendarCheck2 className="h-6 w-6 text-white" />
             </div>
             <div>
               <span className="text-gradient-blue-cyan text-xl">
                 Today's Progress
               </span>
               <p className="text-sm text-muted-foreground font-normal mt-1">
-                Daily activity and streaks
+                Problems solved and time invested today
               </p>
             </div>
           </CardTitle>

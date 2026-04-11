@@ -116,7 +116,9 @@ const EnhancedInput = React.forwardRef<HTMLInputElement, EnhancedInputProps>(
             type={inputType}
             className={cn(
               "flex-1 bg-transparent outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed",
-              leftIcon && "pl-2" // Add padding-left when there's a left icon
+              leftIcon && "pl-2", // Add padding-left when there's a left icon
+              type === "search" &&
+                "[&::-webkit-search-decoration]:appearance-none [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-results-button]:appearance-none [&::-webkit-search-results-decoration]:appearance-none"
             )}
             value={value}
             onChange={handleChange}

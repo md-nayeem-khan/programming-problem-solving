@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { calculateDailyProgressSnapshot } from '@/lib/analytics/daily-progress-metrics'
 
 const REVISION_INTERVALS = [1, 3, 7, 14]
 
@@ -22,14 +23,17 @@ export async function GET(request: NextRequest) {
       where,
       include: { 
         problem: { 
-          select: { 
-            id: true, 
-            platform: true, 
-            problemId: true, 
-            title: true,
-            source: true,
-            company: true 
-          } 
+          include: {
+            companies: {
+              include: {
+                company: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          }
         } 
       },
       orderBy: { submittedAt: 'desc' },
@@ -120,13 +124,16 @@ export async function POST(request: NextRequest) {
       },
       include: {
         problem: {
-          select: {
-            id: true,
-            platform: true,
-            problemId: true,
-            title: true,
-            source: true,
-            company: true,
+          include: {
+            companies: {
+              include: {
+                company: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
           }
         }
       }
@@ -165,27 +172,21 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Count unique patterns worked on today
-      const patternsSet = new Set<string>()
-      todaySubmissions.forEach(sub => {
-        sub.problem.patterns.forEach(pp => {
-          patternsSet.add(pp.pattern.name)
-        })
-      })
+      const dailySnapshot = calculateDailyProgressSnapshot(todaySubmissions)
 
       // Update daily progress
       await prisma.dailyProgress.upsert({
         where: { date: normalizedDate },
         update: {
-          problemsSolved: { increment: status === 'solved' ? 1 : 0 },
-          totalTimeSpent: { increment: timeSpentSeconds },
-          patternsWorked: patternsSet.size,
+          problemsSolved: dailySnapshot.problemsSolved,
+          totalTimeSpent: dailySnapshot.totalTimeSpent,
+          patternsWorked: dailySnapshot.patternsWorked,
         },
         create: {
           date: normalizedDate,
-          problemsSolved: status === 'solved' ? 1 : 0,
-          totalTimeSpent: timeSpentSeconds,
-          patternsWorked: patternsSet.size,
+          problemsSolved: dailySnapshot.problemsSolved,
+          totalTimeSpent: dailySnapshot.totalTimeSpent,
+          patternsWorked: dailySnapshot.patternsWorked,
           mockInterviews: 0
         }
       })

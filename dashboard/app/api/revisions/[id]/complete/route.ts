@@ -66,6 +66,7 @@ export async function POST(
       : Math.max(currentLevel - 1, 0);  // Regress if failed
 
     const nextReviewDate = new Date();
+    nextReviewDate.setHours(0, 0, 0, 0);
     nextReviewDate.setDate(nextReviewDate.getDate() + REVISION_INTERVALS[nextLevel]);
 
     // Update current revision
@@ -90,9 +91,7 @@ export async function POST(
                   include: {
                     pattern: true
                   }
-                },
-                company: true,
-                platform: true
+                }
               }
             }
           }
@@ -100,9 +99,9 @@ export async function POST(
       }
     });
 
-    // Create next revision if successful (but only if not at max level)
+    // Create next revision so the spaced-repetition chain always continues.
     let nextRevision = null;
-    if (validatedData.wasSuccessful && nextLevel < REVISION_INTERVALS.length - 1) {
+    if (nextLevel < REVISION_INTERVALS.length - 1 || !validatedData.wasSuccessful) {
       nextRevision = await prisma.revision.create({
         data: {
           submissionId: currentRevision.submissionId,
@@ -119,9 +118,7 @@ export async function POST(
                     include: {
                       pattern: true
                     }
-                  },
-                  company: true,
-                  platform: true
+                  }
                 }
               }
             }

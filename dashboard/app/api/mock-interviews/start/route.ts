@@ -17,7 +17,13 @@ export async function POST(request: NextRequest) {
     }
     
     if (company) {
-      whereClause.company = company
+      whereClause.companies = {
+        some: {
+          company: {
+            name: company,
+          },
+        },
+      }
     }
     
     // Get problems that haven't been used in mock interviews recently

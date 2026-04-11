@@ -15,14 +15,14 @@ interface CompanyReadiness {
   readiness: "Ready" | "Almost Ready" | "Not Ready";
 }
 
-const COMPANY_COLORS: Record<string, string> = {
-  Amazon: "from-orange-500 to-orange-600",
-  Google: "from-blue-500 via-red-500 to-yellow-500",
-  Meta: "from-blue-600 to-blue-700",
-  Apple: "from-gray-700 to-gray-800",
-  Netflix: "from-red-600 to-red-700",
-  Microsoft: "from-cyan-500 to-cyan-600",
-};
+const COMPANY_COLORS = [
+  "from-blue-500 to-cyan-500",
+  "from-emerald-500 to-teal-500",
+  "from-violet-500 to-fuchsia-500",
+  "from-orange-500 to-amber-500",
+  "from-rose-500 to-pink-500",
+  "from-slate-500 to-gray-600",
+];
 
 export function CompanyReadinessCard() {
   const [companies, setCompanies] = useState<CompanyReadiness[]>([]);
@@ -38,7 +38,7 @@ export function CompanyReadinessCard() {
         const data = await response.json();
         
         const companyData = data.companies?.map((c: any) => {
-          const readinessValue = c.readiness ?? 0;
+          const readinessValue = c.readinessScore ?? 0;
           return {
             company: c.company,
             percentage: Math.round(readinessValue * 100),
@@ -157,7 +157,7 @@ export function CompanyReadinessCard() {
                 {/* Progress Bar */}
                 <div className="relative h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
                   <motion.div
-                    className={`h-full bg-gradient-to-r ${COMPANY_COLORS[company.company] || 'from-gray-500 to-gray-600'} relative`}
+                    className={`h-full bg-gradient-to-r ${COMPANY_COLORS[index % COMPANY_COLORS.length]} relative`}
                     initial={{ width: 0 }}
                     animate={{ width: `${company.percentage}%` }}
                     transition={{ 

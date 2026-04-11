@@ -10,6 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -18,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableMultiSelect } from "@/components/forms/SearchableMultiSelect";
 import { toast } from "sonner";
 import { fadeInUp, staggerContainer, staggerItem } from "@/lib/animations";
 
@@ -30,6 +34,8 @@ interface ProblemForEdit {
   url?: string;
   notes?: string;
   company?: string;
+  companies?: string[];
+  companyIds?: number[];
   tags?: string[];
   patterns: { id: number; name: string; category: string }[];
 }
@@ -39,6 +45,11 @@ interface EditProblemFormProps {
   onOpenChange: (open: boolean) => void;
   problem: ProblemForEdit | null;
   onSuccess?: () => void;
+}
+
+interface CompanyOption {
+  id: number;
+  name: string;
 }
 
 const difficultyOptions = ["Easy", "Medium", "Hard"];
@@ -75,26 +86,7 @@ const fallbackPatterns = [
   "Bit Manipulation",
 ];
 
-const companies = [
-  "Google",
-  "Amazon",
-  "Microsoft",
-  "Meta",
-  "Apple",
-  "Netflix",
-  "Tesla",
-  "Uber",
-  "Airbnb",
-  "LinkedIn",
-  "Spotify",
-  "Dropbox",
-  "Stripe",
-  "Coinbase",
-  "ByteDance",
-  "Nvidia",
-];
-
-const tags = [
+const fallbackTags = [
   "Array",
   "String",
   "Hash Map",
@@ -129,31 +121,72 @@ export function EditProblemForm({
 }: EditProblemFormProps) {
   const [loading, setLoading] = useState(false);
   const [availablePatterns, setAvailablePatterns] = useState<{ id: number; name: string }[]>([]);
+  const [availableCompanies, setAvailableCompanies] = useState<CompanyOption[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    tag: "",
+    tags: [] as string[],
     difficulty: "",
-    pattern: "",
-    company: "",
+    patterns: [] as string[],
+    companyIds: [] as string[],
     platform: "",
     url: "",
     problemId: "",
   });
 
   useEffect(() => {
-    const fetchPatterns = async () => {
+    const fetchFilterOptions = async () => {
       try {
-        const response = await fetch("/api/patterns");
-        if (!response.ok) return;
-        const data = await response.json();
-        setAvailablePatterns(data.patterns || []);
+        const [patternsResponse, filtersResponse, companiesResponse] = await Promise.all([
+          fetch("/api/patterns"),
+          fetch("/api/problems/filters"),
+          fetch("/api/companies"),
+        ]);
+
+        if (patternsResponse.ok) {
+          const patternData = await patternsResponse.json();
+          setAvailablePatterns(patternData.patterns || []);
+        }
+
+        if (filtersResponse.ok) {
+          const filterData = await filtersResponse.json();
+          const tagsFromApi = Array.isArray(filterData?.tags)
+            ? filterData.tags.filter((value: unknown) => typeof value === "string")
+            : [];
+          setAvailableTags(tagsFromApi);
+        }
+
+        if (companiesResponse.ok) {
+          const companiesPayload = await companiesResponse.json();
+          const rawCompanies = Array.isArray(companiesPayload?.companies)
+            ? companiesPayload.companies
+            : [];
+
+          const companiesFromApi: CompanyOption[] = rawCompanies
+            .filter((value: unknown) => {
+              return (
+                typeof value === "object" &&
+                value !== null &&
+                Number.isInteger((value as { id?: unknown }).id) &&
+                typeof (value as { name?: unknown }).name === "string"
+              );
+            })
+            .map((value: { id: number; name: string }) => ({
+              id: value.id,
+              name: value.name,
+            }));
+
+          setAvailableCompanies(companiesFromApi);
+        }
       } catch {
         setAvailablePatterns([]);
+        setAvailableCompanies([]);
+        setAvailableTags([]);
       }
     };
 
-    fetchPatterns();
+    fetchFilterOptions();
   }, []);
 
   useEffect(() => {
@@ -162,10 +195,10 @@ export function EditProblemForm({
     setFormData({
       title: problem.title || "",
       description: problem.notes || "",
-      tag: problem.tags?.[0] || "",
+      tags: problem.tags || [],
       difficulty: formatDifficultyForSelect(problem.difficulty),
-      pattern: problem.patterns[0]?.name || "",
-      company: problem.company || "",
+      patterns: problem.patterns.map((pattern) => pattern.name),
+      companyIds: (problem.companyIds || []).map((id) => String(id)),
       platform: problem.platform || "",
       url: problem.url || "",
       problemId: problem.problemId || "",
@@ -178,6 +211,15 @@ export function EditProblemForm({
     }
     return fallbackPatterns;
   }, [availablePatterns]);
+
+  const companyOptions = useMemo(() => availableCompanies, [availableCompanies]);
+
+  const tagOptions = useMemo(() => {
+    if (availableTags.length > 0) {
+      return availableTags;
+    }
+    return fallbackTags;
+  }, [availableTags]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,9 +236,12 @@ export function EditProblemForm({
     setLoading(true);
 
     try {
-      const selectedPatternId = availablePatterns.find(
-        (p) => p.name === formData.pattern
-      )?.id;
+      const selectedPatternIds = availablePatterns
+        .filter((p) => formData.patterns.includes(p.name))
+        .map((p) => p.id);
+      const selectedCompanyIds = formData.companyIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0);
 
       const response = await fetch(`/api/problems/${problem.id}`, {
         method: "PUT",
@@ -206,10 +251,10 @@ export function EditProblemForm({
           difficulty: formData.difficulty.toLowerCase(),
           url: formData.url || null,
           notes: formData.description || null,
-          source: formData.company ? "Company" : "NeetCode",
-          company: formData.company || null,
-          tags: formData.tag.trim() ? [formData.tag.trim()] : [],
-          patterns: selectedPatternId ? [selectedPatternId] : [],
+          source: selectedCompanyIds.length > 0 ? "Company" : "NeetCode",
+          companyIds: selectedCompanyIds,
+          tags: formData.tags,
+          patterns: selectedPatternIds,
         }),
       });
 
@@ -242,9 +287,12 @@ export function EditProblemForm({
               exit="hidden"
               className="relative z-10"
             >
-              <div className="pb-6 border-b border-gray-200">
-                <h2 className="text-2xl font-semibold text-gray-900">Edit Problem</h2>
-              </div>
+              <DialogHeader className="pb-6 border-b border-gray-200">
+                <DialogTitle className="text-2xl font-semibold text-gray-900">Edit Problem</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Edit the selected coding problem details, including patterns, companies, and tags.
+                </DialogDescription>
+              </DialogHeader>
 
               <motion.form
                 onSubmit={handleSubmit}
@@ -331,42 +379,29 @@ export function EditProblemForm({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-foreground">Algorithm Pattern *</Label>
-                      <Select
-                        value={formData.pattern}
-                        onValueChange={(value) => setFormData((prev) => ({ ...prev, pattern: value }))}
-                        required
-                      >
-                        <SelectTrigger className="h-10 w-full !border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400">
-                          <SelectValue placeholder="Choose algorithm pattern" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {patternOptions.map((pattern) => (
-                            <SelectItem key={pattern} value={pattern}>
-                              {pattern}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableMultiSelect
+                        options={patternOptions.map((pattern) => ({ value: pattern, label: pattern }))}
+                        selectedValues={formData.patterns}
+                        onChange={(values) => setFormData((prev) => ({ ...prev, patterns: values }))}
+                        placeholder="Choose algorithm patterns"
+                        searchPlaceholder="Quick search patterns..."
+                        className="!border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400"
+                      />
                     </div>
 
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-foreground">Company Association *</Label>
-                      <Select
-                        value={formData.company}
-                        onValueChange={(value) => setFormData((prev) => ({ ...prev, company: value }))}
-                        required
-                      >
-                        <SelectTrigger className="h-10 w-full !border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400">
-                          <SelectValue placeholder="Select target company" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {companies.map((company) => (
-                            <SelectItem key={company} value={company}>
-                              {company}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableMultiSelect
+                        options={companyOptions.map((company) => ({
+                          value: String(company.id),
+                          label: company.name,
+                        }))}
+                        selectedValues={formData.companyIds}
+                        onChange={(values) => setFormData((prev) => ({ ...prev, companyIds: values }))}
+                        placeholder="Select target companies"
+                        searchPlaceholder="Quick search companies..."
+                        className="!border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400"
+                      />
                     </div>
                   </div>
 
@@ -375,24 +410,14 @@ export function EditProblemForm({
                       <Label htmlFor="tag" className="text-sm font-medium text-foreground">
                         Tag
                       </Label>
-                      <Select
-                        value={formData.tag || "none"}
-                        onValueChange={(value) =>
-                          setFormData((prev) => ({ ...prev, tag: value === "none" ? "" : value }))
-                        }
-                      >
-                        <SelectTrigger className="h-10 w-full !border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400">
-                          <SelectValue placeholder="Choose tag" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No Tag</SelectItem>
-                          {tags.map((tag) => (
-                            <SelectItem key={tag} value={tag}>
-                              {tag}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableMultiSelect
+                        options={tagOptions.map((tag) => ({ value: tag, label: tag }))}
+                        selectedValues={formData.tags}
+                        onChange={(values) => setFormData((prev) => ({ ...prev, tags: values }))}
+                        placeholder="Choose tags"
+                        searchPlaceholder="Quick search tags..."
+                        className="!border !border-purple-200 !rounded-md !ring-0 focus-visible:!ring-1 focus-visible:!ring-purple-400 focus-visible:!border-purple-400"
+                      />
                     </div>
 
                     <div className="space-y-2">

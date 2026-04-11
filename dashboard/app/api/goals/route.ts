@@ -22,10 +22,9 @@ export async function GET(request: NextRequest) {
           orderBy: { dueDate: 'asc' }
         }
       },
-      orderBy: [
-        { priority: 'desc' },
-        { deadline: 'asc' }
-      ]
+      orderBy: {
+        createdAt: 'asc'
+      }
     });
 
     // Calculate progress for each goal
@@ -150,8 +149,6 @@ export async function POST(request: NextRequest) {
 
 // Helper function to calculate current value based on goal type
 async function calculateCurrentValue(goal: any): Promise<number> {
-  const now = new Date();
-
   switch (goal.type) {
     case 'problemCount':
       // Count problems solved since goal start date
@@ -162,8 +159,10 @@ async function calculateCurrentValue(goal: any): Promise<number> {
         status: 'solved'
       };
 
+      const problemFilters: any = {};
+
       if (goal.targetPattern) {
-        whereClause.problem = {
+        problemFilters.patterns = {
           patterns: {
             some: {
               pattern: {
@@ -175,16 +174,22 @@ async function calculateCurrentValue(goal: any): Promise<number> {
       }
 
       if (goal.targetCompany) {
-        whereClause.problem = {
-          ...whereClause.problem,
-          company: goal.targetCompany
+        problemFilters.companies = {
+          some: {
+            company: {
+              name: goal.targetCompany
+            }
+          }
         };
       }
 
       if (goal.targetDifficulty) {
+        problemFilters.difficulty = goal.targetDifficulty.toLowerCase();
+      }
+
+      if (Object.keys(problemFilters).length > 0) {
         whereClause.problem = {
-          ...whereClause.problem,
-          difficulty: goal.targetDifficulty.toLowerCase()
+          is: problemFilters
         };
       }
 
@@ -245,7 +250,15 @@ async function calculateCurrentValue(goal: any): Promise<number> {
           },
           status: 'solved',
           problem: {
-            company: goal.targetCompany
+            is: {
+              companies: {
+                some: {
+                  company: {
+                    name: goal.targetCompany
+                  }
+                }
+              }
+            }
           }
         }
       });

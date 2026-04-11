@@ -191,12 +191,20 @@ export async function POST(request: NextRequest) {
         if (patternsIdx >= 0 && values[patternsIdx]) {
           const patternNames = values[patternsIdx].split(';').map(p => p.trim()).filter(p => p)
           for (const patternName of patternNames) {
-            // Find pattern by name
+            // Try exact pattern label first, then fallback to top-level token before arrow/colon.
+            const normalizedTopLevel = patternName
+              .split('→')[0]
+              .split(':')[0]
+              .trim()
+
             const pattern = await prisma.pattern.findFirst({
               where: {
-                name: {
-                  contains: patternName
-                }
+                OR: [
+                  { name: { equals: patternName, mode: 'insensitive' } },
+                  { name: { equals: normalizedTopLevel, mode: 'insensitive' } },
+                  { name: { startsWith: `${normalizedTopLevel} →`, mode: 'insensitive' } },
+                  { name: { startsWith: `${normalizedTopLevel}:`, mode: 'insensitive' } }
+                ]
               }
             })
 
