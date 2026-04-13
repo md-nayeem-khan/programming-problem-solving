@@ -32,13 +32,12 @@ export interface PatternCoverageMetric {
   percentage: number;
 }
 
-export function getLatestSolvedSubmission(
+export function getLatestSubmission(
   submissions: CompanySubmissionMetricInput[]
 ): CompanySubmissionMetricInput | null {
-  const solved = submissions.filter((submission) => submission.status === "solved");
-  if (solved.length === 0) return null;
+  if (submissions.length === 0) return null;
 
-  return solved.reduce((latest, current) => {
+  return submissions.reduce((latest, current) => {
     const latestTime = new Date(latest.submittedAt).getTime();
     const currentTime = new Date(current.submittedAt).getTime();
     return currentTime > latestTime ? current : latest;
@@ -51,9 +50,9 @@ export function calculateCompanySummaryMetrics(
   const latestSolvedByProblemId = new Map<number, CompanySubmissionMetricInput>();
 
   for (const problem of problems) {
-    const latestSolved = getLatestSolvedSubmission(problem.submissions);
-    if (latestSolved) {
-      latestSolvedByProblemId.set(problem.id, latestSolved);
+    const latestSubmission = getLatestSubmission(problem.submissions);
+    if (latestSubmission?.status === "solved") {
+      latestSolvedByProblemId.set(problem.id, latestSubmission);
     }
   }
 

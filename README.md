@@ -16,13 +16,13 @@ A comprehensive Java toolkit for competitive programming and technical interview
 # Clone and build
 git clone <repository-url>
 cd programming-problem-solving
-mvn clean install
+mvn -f practice/pom.xml clean install
 
 # Run all tests
-mvn test
+mvn -f practice/pom.xml test
 
 # Run specific test
-mvn test -Dtest=P001_TwoSumTest
+mvn -f practice/pom.xml test -Dtest=P001_TwoSumTest
 ```
 
 ## Creating New Problems
@@ -31,39 +31,43 @@ Use the `new-problem.ps1` script to auto-generate problem files with proper stru
 
 ```powershell
 # LeetCode problem
-.\scripts\new-problem.ps1 -Id 1 -Title "Two Sum" -Platform leetcode -Difficulty easy -Tags "Array,HashTable" -Url "https://leetcode.com/problems/two-sum/"
+.\practice\scripts\new-problem.ps1 -Id 1 -Title "Two Sum" -Platform leetcode -Difficulty easy -Tags "Array,HashTable" -Url "https://leetcode.com/problems/two-sum/"
 
 # Codeforces problem
-.\scripts\new-problem.ps1 -Id "4A" -Title "Watermelon" -Platform codeforces -Difficulty easy -Tags "Math,Greedy"
+.\practice\scripts\new-problem.ps1 -Id "4A" -Title "Watermelon" -Platform codeforces -Difficulty easy -Tags "Math,Greedy"
 
 # Preview without creating files (dry run)
-.\scripts\new-problem.ps1 -Id 42 -Title "Test" -Platform leetcode -DryRun
+.\practice\scripts\new-problem.ps1 -Id 42 -Title "Test" -Platform leetcode -DryRun
 
 # Get help
-Get-Help .\scripts\new-problem.ps1 -Detailed
+Get-Help .\practice\scripts\new-problem.ps1 -Detailed
 ```
 
 **What it creates:**
-- Solution file: `src/main/java/com/cp/problems/{platform}/P{id}_{Title}.java`
-- Test file: `src/test/java/com/cp/problems/{platform}/P{id}_{Title}Test.java`
-- Test case template: `src/test/resources/testcases/{platform}/{id}_{title}.txt`
+- Solution file: `practice/src/main/java/com/cp/problems/{platform}/P{id}_{Title}.java`
+- Test file: `practice/src/test/java/com/cp/problems/{platform}/P{id}_{Title}Test.java`
+- Test case template: `practice/src/test/resources/testcases/{platform}/{id}_{title}.txt`
 
 All files include proper `@Problem` annotations and boilerplate code.
 
 ## Project Structure
 
 ```
-src/
-├── main/java/com/cp/
-│   ├── algorithms/           # 45+ algorithm templates
-│   ├── datastructures/       # Core data structures
-│   ├── problems/             # LeetCode & Codeforces solutions
-│   │   ├── leetcode/
-│   │   └── codeforces/
-│   └── testcases/            # Auto test case loading system
-└── test/
-    ├── java/com/cp/          # Unit tests
-    └── resources/testcases/  # Test case files
+dashboard/                    # Next.js analytics app
+practice/
+├── pom.xml
+├── scripts/
+└── src/
+   ├── main/java/com/cp/
+   │   ├── algorithms/       # 45+ algorithm templates
+   │   ├── datastructures/   # Core data structures
+   │   ├── problems/         # LeetCode & Codeforces solutions
+   │   │   ├── leetcode/
+   │   │   └── codeforces/
+   │   └── testcases/        # Auto test case loading system
+   └── test/
+      ├── java/com/cp/      # Unit tests
+      └── resources/testcases/ # Test case files
 ```
 
 ---
@@ -379,7 +383,7 @@ src/
 Auto-load test cases from files:
 
 ```
-src/test/resources/testcases/
+practice/src/test/resources/testcases/
 ├── leetcode/
 │   └── 001_two_sum.txt      # key=value format
 └── codeforces/
@@ -406,7 +410,7 @@ OUTPUT=[0,1]
 
 1. Copy `P000_Template.java` to `P{number}_{Name}.java`
 2. Copy `P000_TemplateTest.java` for tests
-3. Add test cases to `resources/testcases/leetcode/`
+3. Add test cases to `practice/src/test/resources/testcases/leetcode/`
 
 ### Codeforces
 
@@ -524,22 +528,22 @@ OUTPUT=[0,1]
 
 ```bash
 # All tests
-mvn test
+mvn -f practice/pom.xml test
 
 # Specific test class
-mvn test -Dtest=P001_TwoSumTest
+mvn -f practice/pom.xml test -Dtest=P001_TwoSumTest
 
 # All LeetCode tests
-mvn test -Dtest="com.cp.problems.leetcode.*"
+mvn -f practice/pom.xml test -Dtest="com.cp.problems.leetcode.*"
 
 # With coverage report
-mvn test jacoco:report
-# View: target/site/jacoco/index.html
+mvn -f practice/pom.xml test jacoco:report
+# View: practice/target/site/jacoco/index.html
 ```
 
 ## IDE Setup (IntelliJ)
 
-1. **Import:** File → Open → Select `pom.xml` → Open as Project
+1. **Import:** File → Open → Select `practice/pom.xml` → Open as Project
 2. **Live Template:** Settings → Editor → Live Templates → Add `cp` template
 3. **Run Tests:** Right-click test file → Run
 4. **LeetCode Plugin:** Marketplace → Install "LeetCode Editor"

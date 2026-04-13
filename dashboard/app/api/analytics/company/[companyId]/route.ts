@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import {
   calculateCompanySummaryMetrics,
   calculatePatternCoverageMetrics,
-  getLatestSolvedSubmission,
+  getLatestSubmission,
 } from '@/lib/analytics/company-metrics'
 
 // GET /api/analytics/company/[companyId] - Get analytics for a specific company by id
@@ -101,8 +101,8 @@ export async function GET(
         id: p.id,
         title: p.title,
         difficulty: p.difficulty,
-        status: getLatestSolvedSubmission(p.submissions)?.status || p.submissions[0]?.status || 'not_attempted',
-        lastAttempt: getLatestSolvedSubmission(p.submissions)?.submittedAt || p.submissions[0]?.submittedAt || null,
+        status: getLatestSubmission(p.submissions)?.status || p.submissions[0]?.status || 'not_attempted',
+        lastAttempt: getLatestSubmission(p.submissions)?.submittedAt || p.submissions[0]?.submittedAt || null,
       })),
     })
   } catch (error) {

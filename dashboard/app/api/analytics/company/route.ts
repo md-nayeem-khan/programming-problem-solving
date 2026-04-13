@@ -1,7 +1,12 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { calculateReadinessScore, type CompanyReadiness } from '@/types'
+import {
+  calculateReadinessScore,
+  getReadinessLevel,
+  READINESS_READY_THRESHOLD,
+  type CompanyReadiness,
+} from '@/types'
 
 function normalizeCompanyName(value: string | null | undefined): string | null {
   if (typeof value !== 'string') return null
@@ -94,7 +99,16 @@ export async function GET(request: NextRequest) {
           }
         })
 
-        const allSubmissions = problems.flatMap((p: any) => p.submissions)
+        const allSubmissions = problems.flatMap((p: any) =>
+          p.submissions.map((sub: any) => ({
+            ...sub,
+            problem: {
+              difficulty: p.difficulty,
+              id: p.id,
+            },
+          }))
+        )
+
         const readinessScore = calculateReadinessScore(allSubmissions.map((sub: any) => ({
           ...sub,
           status: sub.status as "solved" | "failed" | "partial" | "abandoned",
@@ -142,11 +156,12 @@ export async function GET(request: NextRequest) {
           totalProblems,
           avgTimeSeconds: Math.round(avgTimeSeconds),
           readinessScore: readinessScore.score,
-          isReady: readinessScore.score >= 0.75
+          isReady: readinessScore.score >= READINESS_READY_THRESHOLD
         }
 
         return {
           ...companyReadiness,
+          readinessLevel: getReadinessLevel(readinessScore.score),
           topPatterns,
           difficulty,
           coverageRate: totalProblems > 0 ? solvedProblems / totalProblems : 0,

@@ -1,7 +1,12 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { calculateReadinessScore } from '@/types'
+import {
+  TIME_BENCHMARKS,
+  calculateReadinessScoreFromLatestSubmissions,
+  getDifficultyBenchmarkKey,
+  getLatestSubmissionsPerProblem,
+} from '@/types'
 
 // GET /api/analytics/readiness - Calculate FAANG interview readiness score
 export async function GET(request: NextRequest) {
@@ -60,8 +65,7 @@ export async function GET(request: NextRequest) {
       orderBy: { submittedAt: 'desc' }
     })
 
-    // Calculate overall readiness score
-    const readinessScore = calculateReadinessScore(submissions.map(sub => ({
+    const normalizedSubmissions = submissions.map(sub => ({
       ...sub,
       status: sub.status as "solved" | "failed" | "partial" | "abandoned",
       attemptType: sub.attemptType as "First" | "Revision",
@@ -69,15 +73,20 @@ export async function GET(request: NextRequest) {
       mistakeNote: sub.mistakeNote ?? undefined,
       approachNote: sub.approachNote ?? undefined,
       patternRecognitionSeconds: sub.patternRecognitionSeconds ?? undefined
-    })))
+    }))
+
+    const latestSubmissions = getLatestSubmissionsPerProblem(normalizedSubmissions)
+
+    // Calculate overall readiness score
+    const readinessScore = calculateReadinessScoreFromLatestSubmissions(latestSubmissions)
 
     // Calculate detailed metrics
-    const totalProblems = submissions.length
-    const solvedProblems = submissions.filter(s => s.status === 'solved').length
-    const failedProblems = submissions.filter(s => s.status === 'failed').length
+    const totalProblems = latestSubmissions.length
+    const solvedProblems = latestSubmissions.filter(s => s.status === 'solved').length
+    const failedProblems = latestSubmissions.filter(s => s.status === 'failed').length
 
     // Time performance analysis
-    const solvedSubmissions = submissions.filter(s => s.status === 'solved')
+    const solvedSubmissions = latestSubmissions.filter(s => s.status === 'solved')
     const avgTime = solvedSubmissions.length > 0 
       ? solvedSubmissions.reduce((sum, s) => sum + s.timeSpentSeconds, 0) / solvedSubmissions.length 
       : 0
@@ -88,7 +97,7 @@ export async function GET(request: NextRequest) {
       : 0
 
     // Pattern recognition analysis
-    const withPatternTime = submissions.filter(s => s.patternRecognitionSeconds !== null)
+    const withPatternTime = latestSubmissions.filter(s => s.patternRecognitionSeconds !== null)
     const avgPatternRecognitionTime = withPatternTime.length > 0
       ? withPatternTime.reduce((sum, s) => sum + (s.patternRecognitionSeconds || 0), 0) / withPatternTime.length
       : null
@@ -96,26 +105,26 @@ export async function GET(request: NextRequest) {
     // Difficulty breakdown with case-insensitive matching
     const difficultyStats = {
       easy: {
-        total: submissions.filter(s => s.problem.difficulty?.toLowerCase() === 'easy').length,
-        solved: submissions.filter(s => s.problem.difficulty?.toLowerCase() === 'easy' && s.status === 'solved').length,
+        total: latestSubmissions.filter(s => getDifficultyBenchmarkKey(s.problem?.difficulty) === 'easy').length,
+        solved: latestSubmissions.filter(s => getDifficultyBenchmarkKey(s.problem?.difficulty) === 'easy' && s.status === 'solved').length,
         avgTimeMinutes: 0,
       },
       medium: {
-        total: submissions.filter(s => s.problem.difficulty?.toLowerCase() === 'medium').length,
-        solved: submissions.filter(s => s.problem.difficulty?.toLowerCase() === 'medium' && s.status === 'solved').length,
+        total: latestSubmissions.filter(s => getDifficultyBenchmarkKey(s.problem?.difficulty) === 'medium').length,
+        solved: latestSubmissions.filter(s => getDifficultyBenchmarkKey(s.problem?.difficulty) === 'medium' && s.status === 'solved').length,
         avgTimeMinutes: 0,
       },
       hard: {
-        total: submissions.filter(s => s.problem.difficulty?.toLowerCase() === 'hard').length,
-        solved: submissions.filter(s => s.problem.difficulty?.toLowerCase() === 'hard' && s.status === 'solved').length,
+        total: latestSubmissions.filter(s => getDifficultyBenchmarkKey(s.problem?.difficulty) === 'hard').length,
+        solved: latestSubmissions.filter(s => getDifficultyBenchmarkKey(s.problem?.difficulty) === 'hard' && s.status === 'solved').length,
         avgTimeMinutes: 0,
       }
     }
 
     // Calculate average times per difficulty
-    const easySolved = submissions.filter(s => s.problem.difficulty?.toLowerCase() === 'easy' && s.status === 'solved');
-    const mediumSolved = submissions.filter(s => s.problem.difficulty?.toLowerCase() === 'medium' && s.status === 'solved');
-    const hardSolved = submissions.filter(s => s.problem.difficulty?.toLowerCase() === 'hard' && s.status === 'solved');
+    const easySolved = latestSubmissions.filter(s => getDifficultyBenchmarkKey(s.problem?.difficulty) === 'easy' && s.status === 'solved');
+    const mediumSolved = latestSubmissions.filter(s => getDifficultyBenchmarkKey(s.problem?.difficulty) === 'medium' && s.status === 'solved');
+    const hardSolved = latestSubmissions.filter(s => getDifficultyBenchmarkKey(s.problem?.difficulty) === 'hard' && s.status === 'solved');
 
     if (easySolved.length > 0) {
       difficultyStats.easy.avgTimeMinutes = Math.round(
@@ -134,35 +143,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Recent performance (last 10 submissions)
-    const recentSubmissions = submissions.slice(0, 10);
-    const recentReadiness = calculateReadinessScore(recentSubmissions.map(sub => ({
-      ...sub,
-      status: sub.status as "solved" | "failed" | "partial" | "abandoned",
-      attemptType: sub.attemptType as "First" | "Revision",
-      notes: sub.notes ?? undefined,
-      mistakeNote: sub.mistakeNote ?? undefined,
-      approachNote: sub.approachNote ?? undefined,
-      patternRecognitionSeconds: sub.patternRecognitionSeconds ?? undefined
-    })))
-
-    // Speed benchmarks (interview pace)
-    const TIME_BENCHMARKS = {
-      easy: 15 * 60,    // 15 minutes
-      medium: 25 * 60,  // 25 minutes  
-      hard: 40 * 60     // 40 minutes
-    }
+    const recentSubmissions = latestSubmissions.slice(0, 10);
+    const recentReadiness = calculateReadinessScoreFromLatestSubmissions(recentSubmissions)
 
     const onPaceProblems = solvedSubmissions.filter(s => {
-      const difficultyKey = s.problem.difficulty?.toLowerCase() as keyof typeof TIME_BENCHMARKS
+      const difficultyKey = getDifficultyBenchmarkKey(s.problem?.difficulty)
       const benchmark = TIME_BENCHMARKS[difficultyKey]
-      return benchmark && s.timeSpentSeconds <= benchmark
+      return s.timeSpentSeconds <= benchmark
     }).length
 
     const speedScore = solvedSubmissions.length > 0 ? onPaceProblems / solvedSubmissions.length : 0
 
     // Attempt type analysis
-    const firstAttempts = submissions.filter(s => s.attemptType === 'First')
-    const revisions = submissions.filter(s => s.attemptType === 'Revision')
+    const firstAttempts = latestSubmissions.filter(s => s.attemptType === 'First')
+    const revisions = latestSubmissions.filter(s => s.attemptType === 'Revision')
     
     const firstAttemptSuccess = firstAttempts.length > 0
       ? firstAttempts.filter(s => s.status === 'solved').length / firstAttempts.length
@@ -186,8 +180,8 @@ export async function GET(request: NextRequest) {
       breakdown: {
         firstAttempts: firstAttempts.length,
         revisions: revisions.length,
-        withHints: submissions.filter(s => s.wasHintUsed).length,
-        withoutHints: submissions.filter(s => !s.wasHintUsed && s.status === 'solved').length,
+        withHints: latestSubmissions.filter(s => s.wasHintUsed).length,
+        withoutHints: latestSubmissions.filter(s => !s.wasHintUsed && s.status === 'solved').length,
         onPace: onPaceProblems,
       },
       recommendations: [] as string[]

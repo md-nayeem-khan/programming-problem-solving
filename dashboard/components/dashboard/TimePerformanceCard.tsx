@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, CheckCircle, AlertCircle, XCircle } from "lucide-react";
 import { fadeInUp } from "@/lib/animations";
 import { DashboardMainCardSkeleton } from "@/components/dashboard/DashboardSkeletons";
+import { TIME_BENCHMARKS } from "@/types";
 
 interface TimeStats {
   easy: { avg: number; count: number; met: boolean; hasData: boolean };
@@ -13,11 +14,11 @@ interface TimeStats {
   hard: { avg: number; count: number; met: boolean; hasData: boolean };
 }
 
-const BENCHMARKS = {
-  Easy: 15,
-  Medium: 25,
-  Hard: 40,
-};
+const BENCHMARKS_MINUTES = {
+  easy: TIME_BENCHMARKS.easy / 60,
+  medium: TIME_BENCHMARKS.medium / 60,
+  hard: TIME_BENCHMARKS.hard / 60,
+} as const;
 
 export function TimePerformanceCard() {
   const [stats, setStats] = useState<TimeStats | null>(null);
@@ -40,19 +41,19 @@ export function TimePerformanceCard() {
             avg: Math.round(difficulties.easy?.avgTimeMinutes ?? 0),
             count: difficulties.easy?.solved ?? 0,
             hasData: (difficulties.easy?.solved ?? 0) > 0,
-            met: (difficulties.easy?.solved ?? 0) > 0 && (difficulties.easy?.avgTimeMinutes ?? 0) <= BENCHMARKS.Easy,
+            met: (difficulties.easy?.solved ?? 0) > 0 && (difficulties.easy?.avgTimeMinutes ?? 0) <= BENCHMARKS_MINUTES.easy,
           },
           medium: {
             avg: Math.round(difficulties.medium?.avgTimeMinutes ?? 0),
             count: difficulties.medium?.solved ?? 0,
             hasData: (difficulties.medium?.solved ?? 0) > 0,
-            met: (difficulties.medium?.solved ?? 0) > 0 && (difficulties.medium?.avgTimeMinutes ?? 0) <= BENCHMARKS.Medium,
+            met: (difficulties.medium?.solved ?? 0) > 0 && (difficulties.medium?.avgTimeMinutes ?? 0) <= BENCHMARKS_MINUTES.medium,
           },
           hard: {
             avg: Math.round(difficulties.hard?.avgTimeMinutes ?? 0),
             count: difficulties.hard?.solved ?? 0,
             hasData: (difficulties.hard?.solved ?? 0) > 0,
-            met: (difficulties.hard?.solved ?? 0) > 0 && (difficulties.hard?.avgTimeMinutes ?? 0) <= BENCHMARKS.Hard,
+            met: (difficulties.hard?.solved ?? 0) > 0 && (difficulties.hard?.avgTimeMinutes ?? 0) <= BENCHMARKS_MINUTES.hard,
           },
         });
       } catch (err) {
@@ -154,7 +155,7 @@ export function TimePerformanceCard() {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {stats.easy.hasData
-                    ? `Target: ≤${BENCHMARKS.Easy} min ${stats.easy.met ? "✅" : "⚠️"}`
+                    ? `Target: ≤${BENCHMARKS_MINUTES.easy} min ${stats.easy.met ? "✅" : "⚠️"}`
                     : "Solve at least one Easy problem"}
                 </p>
               </div>
@@ -182,7 +183,7 @@ export function TimePerformanceCard() {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {stats.medium.hasData
-                    ? `Target: ≤${BENCHMARKS.Medium} min ${stats.medium.met ? "✅" : "❌"}`
+                    ? `Target: ≤${BENCHMARKS_MINUTES.medium} min ${stats.medium.met ? "✅" : "❌"}`
                     : "Solve at least one Medium problem"}
                 </p>
               </div>
@@ -210,7 +211,7 @@ export function TimePerformanceCard() {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {stats.hard.hasData
-                    ? `Target: ≤${BENCHMARKS.Hard} min ${stats.hard.met ? "✅" : "❌"}`
+                    ? `Target: ≤${BENCHMARKS_MINUTES.hard} min ${stats.hard.met ? "✅" : "❌"}`
                     : "Solve at least one Hard problem"}
                 </p>
               </div>

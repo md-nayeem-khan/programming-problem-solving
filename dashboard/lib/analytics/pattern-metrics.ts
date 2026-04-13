@@ -42,11 +42,10 @@ export function calculateMasteryFromSignals(
   return Math.min(100, Math.max(0, base));
 }
 
-function getLatestSolvedSubmission(submissions: SubmissionMetricInput[]): SubmissionMetricInput | null {
-  const solved = submissions.filter((s) => s.status === "solved");
-  if (solved.length === 0) return null;
+function getLatestSubmission(submissions: SubmissionMetricInput[]): SubmissionMetricInput | null {
+  if (submissions.length === 0) return null;
 
-  return solved.reduce((latest, current) => {
+  return submissions.reduce((latest, current) => {
     const latestTime = new Date(latest.submittedAt).getTime();
     const currentTime = new Date(current.submittedAt).getTime();
     return currentTime > latestTime ? current : latest;
@@ -70,7 +69,7 @@ export function calculatePatternMetrics(
   >();
 
   for (const problem of problems) {
-    const latestSolvedSubmission = getLatestSolvedSubmission(problem.submissions);
+    const latestSubmission = getLatestSubmission(problem.submissions);
 
     for (const relation of problem.patterns) {
       const { id, name, category } = relation.pattern;
@@ -89,9 +88,9 @@ export function calculatePatternMetrics(
       const data = patternMap.get(name)!;
       data.problemIds.add(problem.id);
 
-      if (latestSolvedSubmission) {
+      if (latestSubmission?.status === "solved") {
         data.solvedProblemIds.add(problem.id);
-        data.latestSolvedSubmissions.push(latestSolvedSubmission);
+        data.latestSolvedSubmissions.push(latestSubmission);
       }
     }
   }

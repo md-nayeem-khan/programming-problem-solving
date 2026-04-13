@@ -4,16 +4,16 @@ import assert from "node:assert/strict";
 import {
   calculateCompanySummaryMetrics,
   calculatePatternCoverageMetrics,
-  getLatestSolvedSubmission,
+  getLatestSubmission,
 } from "../lib/analytics/company-metrics";
 
-test("getLatestSolvedSubmission returns most recent solved attempt", () => {
-  const latest = getLatestSolvedSubmission([
+test("getLatestSubmission returns most recent attempt regardless of status", () => {
+  const latest = getLatestSubmission([
     {
       status: "failed",
       timeSpentSeconds: 2200,
       wasHintUsed: false,
-      submittedAt: "2026-04-01T10:00:00.000Z",
+      submittedAt: "2026-04-03T10:00:00.000Z",
     },
     {
       status: "solved",
@@ -25,16 +25,17 @@ test("getLatestSolvedSubmission returns most recent solved attempt", () => {
       status: "solved",
       timeSpentSeconds: 900,
       wasHintUsed: false,
-      submittedAt: "2026-04-03T10:00:00.000Z",
+      submittedAt: "2026-04-01T10:00:00.000Z",
     },
   ]);
 
   assert.ok(latest);
-  assert.equal(latest.timeSpentSeconds, 900);
+  assert.equal(latest.status, "failed");
+  assert.equal(latest.timeSpentSeconds, 2200);
   assert.equal(latest.wasHintUsed, false);
 });
 
-test("calculateCompanySummaryMetrics deduplicates solved problems and uses latest solved attempts", () => {
+test("calculateCompanySummaryMetrics uses latest submission per problem and counts solved only when latest is solved", () => {
   const metrics = calculateCompanySummaryMetrics([
     {
       id: 1,
@@ -52,6 +53,12 @@ test("calculateCompanySummaryMetrics deduplicates solved problems and uses lates
           timeSpentSeconds: 900,
           wasHintUsed: false,
           submittedAt: "2026-04-02T10:00:00.000Z",
+        },
+        {
+          status: "failed",
+          timeSpentSeconds: 1400,
+          wasHintUsed: false,
+          submittedAt: "2026-04-03T10:00:00.000Z",
         },
       ],
     },
@@ -89,13 +96,13 @@ test("calculateCompanySummaryMetrics deduplicates solved problems and uses lates
     },
   ]);
 
-  assert.equal(metrics.solvedProblems, 2);
-  assert.deepEqual(metrics.solvedProblemIds, [1, 2]);
-  assert.equal(metrics.avgTimeSeconds, 1050);
+  assert.equal(metrics.solvedProblems, 1);
+  assert.deepEqual(metrics.solvedProblemIds, [2]);
+  assert.equal(metrics.avgTimeSeconds, 1200);
   assert.equal(metrics.hintPercentage, 0);
   assert.equal(metrics.hintUsageRate, 0);
   assert.equal(metrics.confidence, "Strong");
-  assert.equal(metrics.masteryPercentage, 95);
+  assert.equal(metrics.masteryPercentage, 85);
 });
 
 test("calculatePatternCoverageMetrics counts solved patterns by solved problem ids", () => {

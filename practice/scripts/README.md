@@ -3,7 +3,7 @@
 ## Basic Usage
 
 ```powershell
-.\scripts\new-problem.ps1 -Id <id> -Title <title> -Platform <platform> [options]
+.\practice\scripts\new-problem.ps1 -Id <id> -Title <title> -Platform <platform> [options]
 ```
 
 ## Parameters
@@ -22,7 +22,7 @@
 
 ### LeetCode Problem
 ```powershell
-.\scripts\new-problem.ps1 `
+.\practice\scripts\new-problem.ps1 `
     -Id 1 `
     -Title "Two Sum" `
     -Platform leetcode `
@@ -32,13 +32,13 @@
 ```
 
 **Creates:**
-- `src/main/java/com/cp/problems/leetcode/P001_TwoSum.java`
-- `src/test/java/com/cp/problems/leetcode/P001_TwoSumTest.java`
-- `src/test/resources/testcases/leetcode/001_two_sum.txt`
+- `practice/src/main/java/com/cp/problems/leetcode/P001_TwoSum.java`
+- `practice/src/test/java/com/cp/problems/leetcode/P001_TwoSumTest.java`
+- `practice/src/test/resources/testcases/leetcode/001_two_sum.txt`
 
 ### Codeforces Problem
 ```powershell
-.\scripts\new-problem.ps1 `
+.\practice\scripts\new-problem.ps1 `
     -Id "4A" `
     -Title "Watermelon" `
     -Platform codeforces `
@@ -47,18 +47,18 @@
 ```
 
 **Creates:**
-- `src/main/java/com/cp/problems/codeforces/CF_4_A.java`
-- `src/test/java/com/cp/problems/codeforces/CF_4_A_Test.java`
-- `src/test/resources/testcases/codeforces/4_A.txt`
+- `practice/src/main/java/com/cp/problems/codeforces/CF_4_A.java`
+- `practice/src/test/java/com/cp/problems/codeforces/CF_4_A_Test.java`
+- `practice/src/test/resources/testcases/codeforces/4_A.txt`
 
 ### Minimal Example
 ```powershell
-.\scripts\new-problem.ps1 -Id 42 -Title "Test Problem" -Platform leetcode
+.\practice\scripts\new-problem.ps1 -Id 42 -Title "Test Problem" -Platform leetcode
 ```
 
 ### Dry Run (Preview Only)
 ```powershell
-.\scripts\new-problem.ps1 -Id 99 -Title "Preview" -Platform leetcode -DryRun
+.\practice\scripts\new-problem.ps1 -Id 99 -Title "Preview" -Platform leetcode -DryRun
 ```
 
 ## File Naming Conventions
@@ -108,7 +108,7 @@
 1. **Implement solution** in the generated `.java` file
 2. **Add test cases** to the `.txt` file (copy from problem description)
 3. **Update test file** to parse inputs and call your solution method
-4. **Run tests**: `mvn test -Dtest=P{id}_{Title}Test`
+4. **Run tests**: `mvn -f practice/pom.xml test -Dtest=P{id}_{Title}Test`
 
 ## Tips
 
@@ -121,7 +121,7 @@
 ## Help
 
 ```powershell
-Get-Help .\scripts\new-problem.ps1
-Get-Help .\scripts\new-problem.ps1 -Detailed
-Get-Help .\scripts\new-problem.ps1 -Examples
+Get-Help .\practice\scripts\new-problem.ps1
+Get-Help .\practice\scripts\new-problem.ps1 -Detailed
+Get-Help .\practice\scripts\new-problem.ps1 -Examples
 ```

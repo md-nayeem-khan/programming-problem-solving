@@ -3,13 +3,13 @@
 ## TL;DR
 ```powershell
 # Create LeetCode problem
-.\scripts\new-problem.ps1 -Id 1 -Title "Two Sum" -Platform leetcode -Difficulty easy
+.\practice\scripts\new-problem.ps1 -Id 1 -Title "Two Sum" -Platform leetcode -Difficulty easy
 
 # Create Codeforces problem  
-.\scripts\new-problem.ps1 -Id "4A" -Title "Watermelon" -Platform codeforces
+.\practice\scripts\new-problem.ps1 -Id "4A" -Title "Watermelon" -Platform codeforces
 
 # Preview first (recommended)
-.\scripts\new-problem.ps1 -Id 42 -Title "Test" -Platform leetcode -DryRun
+.\practice\scripts\new-problem.ps1 -Id 42 -Title "Test" -Platform leetcode -DryRun
 ```
 
 ## Required Parameters
@@ -34,13 +34,13 @@
 1. Run the script to generate files
 2. Implement your solution in the `.java` file
 3. Add test cases to the `.txt` file
-4. Run: `mvn test -Dtest=P{id}_{Title}Test`
+4. Run: `mvn -f practice/pom.xml test -Dtest=P{id}_{Title}Test`
 
 ## Examples
 
 **Full LeetCode Problem:**
 ```powershell
-.\scripts\new-problem.ps1 `
+.\practice\scripts\new-problem.ps1 `
     -Id 1 `
     -Title "Two Sum" `
     -Platform leetcode `
@@ -51,7 +51,7 @@
 
 **Simple Codeforces:**
 ```powershell
-.\scripts\new-problem.ps1 -Id "1234B" -Title "Sample" -Platform codeforces
+.\practice\scripts\new-problem.ps1 -Id "1234B" -Title "Sample" -Platform codeforces
 ```
 
-For more details: See `scripts/README.md`
+For more details: See `practice/scripts/README.md`

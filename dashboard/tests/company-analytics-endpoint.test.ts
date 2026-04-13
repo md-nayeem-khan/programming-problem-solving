@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { GET } from "../app/api/analytics/company/[companyId]/route";
 import { prisma } from "../lib/prisma";
 
-test("company analytics endpoint uses latest solved submission per problem and returns confidence/mastery", async () => {
+test("company analytics endpoint uses latest submission per problem and returns confidence/mastery", async () => {
   const originalCompanyFindUnique = (prisma.companyCard as any).findUnique;
   const originalProblemFindMany = (prisma.problem as any).findMany;
 
@@ -24,6 +24,12 @@ test("company analytics endpoint uses latest solved submission per problem and r
           timeSpentSeconds: 1500,
           wasHintUsed: true,
           submittedAt: new Date("2026-04-01T10:00:00.000Z"),
+        },
+        {
+          status: "failed",
+          timeSpentSeconds: 1400,
+          wasHintUsed: false,
+          submittedAt: new Date("2026-04-04T10:00:00.000Z"),
         },
         {
           status: "solved",
@@ -80,18 +86,18 @@ test("company analytics endpoint uses latest solved submission per problem and r
     assert.equal(response.status, 200);
 
     assert.equal(body.summary.totalProblems, 3);
-    assert.equal(body.summary.solvedProblems, 2);
-    assert.deepEqual(body.summary.solvedProblemIds, [101, 102]);
-    assert.equal(body.summary.completionRate, 67);
+    assert.equal(body.summary.solvedProblems, 1);
+    assert.deepEqual(body.summary.solvedProblemIds, [102]);
+    assert.equal(body.summary.completionRate, 33);
 
-    // Latest solved per solved problem -> (900 + 1200) / 2 = 1050s
-    assert.equal(body.summary.avgTimeSeconds, 1050);
+    // Latest submission per problem; only problem 102 latest is solved.
+    assert.equal(body.summary.avgTimeSeconds, 1200);
     assert.equal(body.summary.hintPercentage, 0);
     assert.equal(body.summary.confidence, "Strong");
-    assert.equal(body.summary.masteryPercentage, 95);
+    assert.equal(body.summary.masteryPercentage, 85);
 
     assert.equal(body.byDifficulty.Easy.total, 1);
-    assert.equal(body.byDifficulty.Easy.solved, 1);
+    assert.equal(body.byDifficulty.Easy.solved, 0);
     assert.equal(body.byDifficulty.Medium.total, 2);
     assert.equal(body.byDifficulty.Medium.solved, 1);
 
@@ -99,7 +105,7 @@ test("company analytics endpoint uses latest solved submission per problem and r
     const backtracking = body.patternCoverage.find((item: any) => item.pattern === "Backtracking");
     assert.ok(hashMap);
     assert.ok(backtracking);
-    assert.equal(hashMap.solved, 1);
+    assert.equal(hashMap.solved, 0);
     assert.equal(backtracking.solved, 0);
   } finally {
     (prisma.companyCard as any).findUnique = originalCompanyFindUnique;

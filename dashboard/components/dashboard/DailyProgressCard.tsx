@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { CalendarCheck2, Clock, CheckCircle2, AlertCircle, Target, Award, Star } from "lucide-react";
-import { fadeInUp, springBounce, goalCelebration, achievementBadge } from "@/lib/animations";
+import { CalendarCheck2, CheckCircle2, AlertCircle, Star } from "lucide-react";
+import { fadeInUp } from "@/lib/animations";
 import { GlassCard } from "@/components/ui/glass-card";
 import { AnimatedCounter, CountUpStats } from "@/components/ui/animated-counter";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -21,7 +21,6 @@ export function DailyProgressCard() {
   const [data, setData] = useState<DailyProgressData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     async function fetchDailyProgress() {
@@ -42,11 +41,6 @@ export function DailyProgressCard() {
         };
 
         setData(progressData);
-        
-        // Show celebration if goal is met
-        if (progressData.problemsSolved >= progressData.dailyGoal && progressData.problemsSolved > 0) {
-          setTimeout(() => setShowCelebration(true), 1500);
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load data");
       } finally {
@@ -79,7 +73,8 @@ export function DailyProgressCard() {
     );
   }
 
-  const goalProgress = (data.problemsSolved / data.dailyGoal) * 100;
+  const goalProgressRaw = (data.problemsSolved / data.dailyGoal) * 100;
+  const goalProgress = Math.min(goalProgressRaw, 100);
   const goalMet = data.problemsSolved >= data.dailyGoal;
 
   return (
@@ -158,9 +153,9 @@ export function DailyProgressCard() {
               className="mt-4"
             >
               {goalMet && (
-                <div className="dashboard-metric-pill flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-green-emerald text-white font-bold shadow-glow-green border-green-100/40">
+                <div className="dashboard-metric-pill flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-green-emerald font-bold shadow-glow-green border-green-100/40">
                   <CheckCircle2 className="h-4 w-4" />
-                  Goal Achieved!
+                  <span className="text-gradient-blue-cyan">Goal Achieved!</span>
                   <Star className="h-4 w-4" />
                 </div>
               )}
@@ -195,52 +190,6 @@ export function DailyProgressCard() {
           </motion.div>
 
         </CardContent>
-
-        {/* Goal Celebration Overlay */}
-        <AnimatePresence>
-          {showCelebration && goalMet && (
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowCelebration(false)}
-            >
-              <motion.div
-                variants={goalCelebration}
-                initial="hidden"
-                animate="visible"
-                className="text-center space-y-4"
-              >
-                <div className="text-6xl">🎉</div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gradient-green-emerald mb-2">
-                    Daily Goal Achieved!
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Great work completing {data.problemsSolved} problems today!
-                  </p>
-                </div>
-                <div className="flex justify-center gap-2">
-                  {[...Array(3)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ 
-                        delay: i * 0.1 + 0.5,
-                        type: "spring",
-                        stiffness: 400
-                      }}
-                    >
-                      <Award className="h-6 w-6 text-golden-yellow" />
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </GlassCard>
     </motion.div>
   );

@@ -8,7 +8,7 @@ import {
 } from "../lib/analytics/pattern-metrics";
 import { calculatePatternSummary } from "../lib/analytics/pattern-summary";
 
-test("calculatePatternMetrics uses latest solved submission per problem and deduplicates solves", () => {
+test("calculatePatternMetrics uses latest submission per problem and counts solved only when latest is solved", () => {
   const problems: ProblemMetricInput[] = [
     {
       id: 1,
@@ -21,8 +21,8 @@ test("calculatePatternMetrics uses latest solved submission per problem and dedu
           submittedAt: "2026-04-01T10:00:00.000Z",
         },
         {
-          status: "solved",
-          timeSpentSeconds: 900,
+          status: "failed",
+          timeSpentSeconds: 1500,
           wasHintUsed: false,
           submittedAt: "2026-04-02T10:00:00.000Z",
         },
@@ -53,11 +53,11 @@ test("calculatePatternMetrics uses latest solved submission per problem and dedu
 
   const slidingWindow = stats[0];
   assert.equal(slidingWindow.pattern, "Sliding Window");
-  assert.equal(slidingWindow.totalSolved, 2);
-  assert.equal(slidingWindow.avgTimeSeconds, 1350);
-  assert.equal(slidingWindow.hintUsageRate, 0.5);
+  assert.equal(slidingWindow.totalSolved, 1);
+  assert.equal(slidingWindow.avgTimeSeconds, 1800);
+  assert.equal(slidingWindow.hintUsageRate, 1);
   assert.equal(slidingWindow.confidence, "Weak");
-  assert.deepEqual(slidingWindow.solvedProblemIds.sort((a, b) => a - b), [1, 2]);
+  assert.deepEqual(slidingWindow.solvedProblemIds, [2]);
 });
 
 test("calculatePatternMetrics tracks solves per pattern without counting unsolved problems", () => {

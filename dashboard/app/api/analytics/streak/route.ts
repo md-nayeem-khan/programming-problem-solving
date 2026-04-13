@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getDateWindow, buildDailyMap, buildCalendarData, calculateCurrentStreakFromSolvedDays, calculateLongestStreakFromSolvedDays, toDateKey } from '@/lib/analytics/streak-metrics'
+import { getLatestSubmissionsPerProblem } from '@/types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -76,16 +77,20 @@ async function getWeeklyStats() {
     }
   })
 
-  const solvedCount = weeklySubmissions.filter(s => s.status === 'solved').length
-  const totalTimeSpent = weeklySubmissions.reduce((sum, s) => sum + s.timeSpentSeconds, 0)
+  const latestWeeklySubmissions = getLatestSubmissionsPerProblem(weeklySubmissions)
+  const solvedLatestSubmissions = latestWeeklySubmissions.filter(s => s.status === 'solved')
+
+  const solvedCount = solvedLatestSubmissions.length
+  const totalTimeSpent = latestWeeklySubmissions.reduce((sum, s) => sum + s.timeSpentSeconds, 0)
   const uniquePatterns = new Set(
-    weeklySubmissions.flatMap(s => s.problem.patterns.map(p => p.pattern.name))
+    latestWeeklySubmissions.flatMap(s => s.problem.patterns.map(p => p.pattern.name))
   )
+  const solvedTimeSpent = solvedLatestSubmissions.reduce((sum, s) => sum + s.timeSpentSeconds, 0)
 
   return {
     problemsSolved: solvedCount,
     totalTimeSpent,
     patternsWorked: uniquePatterns.size,
-    avgTimePerProblem: solvedCount > 0 ? Math.round(totalTimeSpent / solvedCount) : 0
+    avgTimePerProblem: solvedCount > 0 ? Math.round(solvedTimeSpent / solvedCount) : 0
   }
 }

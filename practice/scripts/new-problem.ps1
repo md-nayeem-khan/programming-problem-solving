@@ -154,6 +154,19 @@ function Get-DifficultyEnum {
     }
 }
 
+function Write-FileUtf8NoBom {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Path,
+
+        [Parameter(Mandatory=$true)]
+        [string]$Content
+    )
+
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+}
+
 # ============================================================================
 # File Name Generation
 # ============================================================================
@@ -230,7 +243,7 @@ import com.cp.problems.BaseSolution;
 import com.cp.problems.Problem;
 
 /**
- * $($Config.Platform) #$($Config.Id) — $($Config.Title)
+ * $($Config.Platform) #$($Config.Id) - $($Config.Title)
  *
  * TODO: Add problem description
  *
@@ -328,7 +341,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("$($Config.Platform) #$($Config.Id) — $($Config.Title)")
+@DisplayName("$($Config.Platform) #$($Config.Id) - $($Config.Title)")
 class $($className)Test {
 
     private final $className solution = new $className();
@@ -372,7 +385,7 @@ import com.cp.testcases.SolutionRunner;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-@DisplayName("$($Config.Platform) #$($Config.Id) — $($Config.Title)")
+@DisplayName("$($Config.Platform) #$($Config.Id) - $($Config.Title)")
 class $($className)Test {
 
     @Test
@@ -433,7 +446,7 @@ expected_output_line_1
 # ============================================================================
 
 function Main {
-    Write-Host "🚀 Problem Generator" -ForegroundColor Cyan
+    Write-Host "Problem Generator" -ForegroundColor Cyan
     Write-Host ("=" * 60) -ForegroundColor Gray
     
     # Configuration
@@ -451,7 +464,7 @@ function Main {
     $filePaths = Get-FilePaths -Config $config -FileNames $fileNames
     
     # Display summary
-    Write-Host "`n📋 Configuration:" -ForegroundColor Yellow
+    Write-Host "`nConfiguration:" -ForegroundColor Yellow
     Write-Host "   ID:         $($config.Id)"
     Write-Host "   Title:      $($config.Title)"
     Write-Host "   Platform:   $($config.Platform)"
@@ -459,13 +472,13 @@ function Main {
     Write-Host "   Tags:       $(if ($config.Tags) { $config.Tags } else { '(none)' })"
     Write-Host "   URL:        $(if ($config.Url) { $config.Url } else { '(none)' })"
     
-    Write-Host "`n📁 Files to create:" -ForegroundColor Yellow
+    Write-Host "`nFiles to create:" -ForegroundColor Yellow
     Write-Host "   Solution:   $($filePaths.SolutionFile)"
     Write-Host "   Test:       $($filePaths.TestFile)"
     Write-Host "   Test cases: $($filePaths.TestCaseFile)"
     
     if ($DryRun) {
-        Write-Host "`n🔍 DRY RUN MODE - No files will be created" -ForegroundColor Magenta
+        Write-Host "`nDRY RUN MODE - No files will be created" -ForegroundColor Magenta
         Write-Host "`n--- Solution File ($($fileNames.SolutionFileName)) ---" -ForegroundColor Green
         Write-Host (New-SolutionTemplate -Config $config -FileNames $fileNames)
         Write-Host "`n--- Test File ($($fileNames.TestFileName)) ---" -ForegroundColor Green
@@ -482,45 +495,47 @@ function Main {
     if (Test-Path $filePaths.TestCaseFile) { $existingFiles += "TestCase" }
     
     if ($existingFiles.Count -gt 0) {
-        Write-Host "`n⚠️  WARNING: The following files already exist:" -ForegroundColor Red
+        Write-Host "`nWARNING: The following files already exist:" -ForegroundColor Red
         $existingFiles | ForEach-Object { Write-Host "   - $_" -ForegroundColor Red }
         $response = Read-Host "`nOverwrite? (y/N)"
         if ($response -ne 'y' -and $response -ne 'Y') {
-            Write-Host "❌ Aborted" -ForegroundColor Red
+            Write-Host "Aborted" -ForegroundColor Red
             return
         }
     }
     
     # Create directories
-    Write-Host "`n📂 Creating directories..." -ForegroundColor Yellow
+    Write-Host "`nCreating directories..." -ForegroundColor Yellow
     @($filePaths.SolutionDir, $filePaths.TestDir, $filePaths.TestCaseDir) | ForEach-Object {
         if (-not (Test-Path $_)) {
             New-Item -ItemType Directory -Path $_ -Force | Out-Null
-            Write-Host "   ✓ Created: $_" -ForegroundColor Green
+            Write-Host "   Created: $_" -ForegroundColor Green
         }
     }
     
     # Generate and write files
-    Write-Host "`n✍️  Generating files..." -ForegroundColor Yellow
+    Write-Host "`nGenerating files..." -ForegroundColor Yellow
     
     $solutionContent = New-SolutionTemplate -Config $config -FileNames $fileNames
-    $solutionContent | Out-File -FilePath $filePaths.SolutionFile -Encoding UTF8
-    Write-Host "   ✓ Created: $($fileNames.SolutionFileName)" -ForegroundColor Green
+    Write-FileUtf8NoBom -Path $filePaths.SolutionFile -Content $solutionContent
+    Write-Host "   Created: $($fileNames.SolutionFileName)" -ForegroundColor Green
     
     $testContent = New-TestTemplate -Config $config -FileNames $fileNames
-    $testContent | Out-File -FilePath $filePaths.TestFile -Encoding UTF8
-    Write-Host "   ✓ Created: $($fileNames.TestFileName)" -ForegroundColor Green
+    Write-FileUtf8NoBom -Path $filePaths.TestFile -Content $testContent
+    Write-Host "   Created: $($fileNames.TestFileName)" -ForegroundColor Green
     
     $testCaseContent = New-TestCaseTemplate -Config $config
-    $testCaseContent | Out-File -FilePath $filePaths.TestCaseFile -Encoding UTF8
-    Write-Host "   ✓ Created: $($fileNames.TestCaseFileName)" -ForegroundColor Green
+    Write-FileUtf8NoBom -Path $filePaths.TestCaseFile -Content $testCaseContent
+    Write-Host "   Created: $($fileNames.TestCaseFileName)" -ForegroundColor Green
     
-    Write-Host "`n✅ Success! Problem files created." -ForegroundColor Green
-    Write-Host "`n📝 Next steps:" -ForegroundColor Cyan
+    $pomPath = Join-Path $ProjectRoot "pom.xml"
+
+    Write-Host "`nSuccess! Problem files created." -ForegroundColor Green
+    Write-Host "`nNext steps:" -ForegroundColor Cyan
     Write-Host "   1. Open $($fileNames.SolutionFileName) and implement your solution"
     Write-Host "   2. Add test cases to $($fileNames.TestCaseFileName)"
     Write-Host "   3. Update the test file if needed: $($fileNames.TestFileName)"
-    Write-Host "   4. Run tests: mvn test -Dtest=$($fileNames.ClassName)Test"
+    Write-Host ("   4. Run tests: mvn -f `"{0}`" test -Dtest={1}Test" -f $pomPath, $fileNames.ClassName)
 }
 
 # Run main

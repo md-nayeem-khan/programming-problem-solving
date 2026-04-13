@@ -17,6 +17,10 @@ export type Confidence = 'Weak' | 'Medium' | 'Strong';
 export type ReadinessLevel = 'Ready' | 'Almost Ready' | 'Not Ready';
 export type RevisionStatus = 'pending' | 'completed' | 'skipped';
 
+export const READINESS_READY_THRESHOLD = 0.8;
+export const READINESS_ALMOST_READY_THRESHOLD = 0.6;
+export const READINESS_MIN_SAMPLE_SIZE = 5;
+
 // Enhanced existing interfaces
 export interface Problem {
   id: number;
@@ -278,6 +282,18 @@ export const TIME_BENCHMARKS = {
   hard: 40 * 60     // 40 minutes
 } as const;
 
+export type DifficultyBenchmarkKey = keyof typeof TIME_BENCHMARKS;
+
+export const getDifficultyBenchmarkKey = (difficulty?: string | null): DifficultyBenchmarkKey => {
+  const normalized = difficulty?.toLowerCase();
+
+  if (normalized === 'easy' || normalized === 'medium' || normalized === 'hard') {
+    return normalized;
+  }
+
+  return 'medium';
+};
+
 // COMPANIES LIST
 export const COMPANIES: Company[] = [
   'Amazon',
@@ -300,18 +316,84 @@ export const calculatePatternConfidence = (avgTimeSeconds: number, hintUsageRate
   return 'Medium';
 };
 
-export const calculateReadinessScore = (submissions: Submission[]): ReadinessScore => {
+type SubmissionWithDifficulty = Submission & {
+  problem?: {
+    id?: number | string;
+    problemId?: number | string;
+    difficulty?: string;
+  };
+};
+
+const getSubmissionProblemKey = (submission: SubmissionWithDifficulty): string | null => {
+  if (typeof submission.problemId === 'number' || typeof submission.problemId === 'string') {
+    return String(submission.problemId);
+  }
+
+  if (submission.problem?.id !== undefined && submission.problem?.id !== null) {
+    return String(submission.problem.id);
+  }
+
+  if (submission.problem?.problemId !== undefined && submission.problem?.problemId !== null) {
+    return String(submission.problem.problemId);
+  }
+
+  return null;
+};
+
+export const getReadinessLevel = (score: number): ReadinessLevel => {
+  if (score >= READINESS_READY_THRESHOLD) return 'Ready';
+  if (score >= READINESS_ALMOST_READY_THRESHOLD) return 'Almost Ready';
+  return 'Not Ready';
+};
+
+export const getLatestSubmissionsPerProblem = <T extends SubmissionWithDifficulty>(submissions: T[]): T[] => {
+  const latestByProblem = new Map<string, T>();
+
+  submissions.forEach((submission) => {
+    const key = getSubmissionProblemKey(submission);
+    if (!key) {
+      return;
+    }
+
+    const existing = latestByProblem.get(key);
+
+    if (!existing) {
+      latestByProblem.set(key, submission);
+      return;
+    }
+
+    const existingTime = new Date(existing.submittedAt).getTime();
+    const currentTime = new Date(submission.submittedAt).getTime();
+
+    if (currentTime > existingTime) {
+      latestByProblem.set(key, submission);
+    }
+  });
+
+  return Array.from(latestByProblem.values()).sort(
+    (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+  );
+};
+
+const getDifficultyBenchmarkSeconds = (submission: SubmissionWithDifficulty): number => {
+  const key = getDifficultyBenchmarkKey(submission.problem?.difficulty);
+  return TIME_BENCHMARKS[key];
+};
+
+export const calculateReadinessScoreFromLatestSubmissions = (latestSubmissions: Submission[]): ReadinessScore => {
   let totalScore = 0;
-  const maxScore = submissions.length * 2;
-  
+  const maxScore = latestSubmissions.length * 2;
+
   let perfectSolves = 0;
   let hintedSolves = 0;
   let failed = 0;
-  
-  for (const sub of submissions) {
+
+  for (const sub of latestSubmissions) {
     if (sub.status === 'solved') {
-      const timeMinutes = sub.timeSpentSeconds / 60;
-      if (timeMinutes < 25 && !sub.wasHintUsed) {
+      const benchmarkSeconds = getDifficultyBenchmarkSeconds(sub as SubmissionWithDifficulty);
+      const isOnPace = sub.timeSpentSeconds <= benchmarkSeconds;
+
+      if (isOnPace && !sub.wasHintUsed) {
         totalScore += 2; // Perfect solve
         perfectSolves++;
       } else {
@@ -322,17 +404,25 @@ export const calculateReadinessScore = (submissions: Submission[]): ReadinessSco
       failed++;
     }
   }
-  
-  const score = maxScore === 0 ? 0 : totalScore / maxScore;
-  
+
+  const rawScore = maxScore === 0 ? 0 : totalScore / maxScore;
+  const score = latestSubmissions.length < READINESS_MIN_SAMPLE_SIZE
+    ? Math.min(rawScore, READINESS_READY_THRESHOLD - 0.01)
+    : rawScore;
+
   return {
     score,
-    level: score >= 0.8 ? 'Ready' : score >= 0.6 ? 'Almost Ready' : 'Not Ready',
+    level: getReadinessLevel(score),
     breakdown: {
-      totalProblems: submissions.length,
+      totalProblems: latestSubmissions.length,
       perfectSolves,
       hintedSolves,
       failed
     }
   };
+};
+
+export const calculateReadinessScore = (submissions: Submission[]): ReadinessScore => {
+  const latestSubmissions = getLatestSubmissionsPerProblem(submissions as SubmissionWithDifficulty[]);
+  return calculateReadinessScoreFromLatestSubmissions(latestSubmissions);
 };

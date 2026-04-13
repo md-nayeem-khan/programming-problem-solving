@@ -132,6 +132,11 @@ const clipTitle = (title: string) => {
   return `${title.slice(0, TITLE_CLIP_LENGTH)}...`;
 };
 
+const clipPattern = (pattern: string) => {
+  if (pattern.length <= 25) return pattern;
+  return `${pattern.slice(0, 25)}...`;
+};
+
 const filterCardVariants = {
   hidden: { opacity: 0, y: -20, scale: 0.95 },
   visible: {
@@ -570,6 +575,13 @@ export default function ProblemsPage() {
     });
   };
 
+  const formatMinutes = (timeSpentSeconds?: number) => {
+    if (typeof timeSpentSeconds !== "number" || Number.isNaN(timeSpentSeconds)) {
+      return null;
+    }
+    return `${Math.max(1, Math.round(timeSpentSeconds / 60))} min`;
+  };
+
   const handleDeleteProblem = async () => {
     if (!deletingProblem?.id) return;
 
@@ -913,28 +925,28 @@ export default function ProblemsPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="table-fixed min-w-full">
                   <TableHeader>
                     <TableRow className="bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-950/30 dark:to-pink-950/30 hover:bg-purple-50/70 dark:hover:bg-purple-950/40">
-                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6">
+                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6 w-[22%]">
                         Title
                       </TableHead>
-                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6">
+                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6 w-[11%]">
                         Difficulty
                       </TableHead>
-                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6">
+                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6 w-[15%]">
                         Pattern
                       </TableHead>
-                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6">
+                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6 w-[17%]">
                         Company
                       </TableHead>
-                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6">
+                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6 w-[12%]">
                         Status
                       </TableHead>
-                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6">
+                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 px-6 w-[14%]">
                         Last Attempt
                       </TableHead>
-                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 text-right px-6">
+                      <TableHead className="font-semibold text-purple-900 dark:text-purple-100 text-right px-6 w-[120px]">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -953,7 +965,7 @@ export default function ProblemsPage() {
                           className="group border-b border-purple-100 dark:border-purple-900/30 transition-colors cursor-pointer hover:bg-purple-50/50 dark:hover:bg-purple-950/20"
                           onClick={() => router.push(`/problems/${problem.id}`)}
                         >
-                          <TableCell className="font-medium px-6">
+                          <TableCell className="font-medium px-6 max-w-[220px]">
                             <div className="flex flex-col gap-1">
                               <span
                                 className="text-foreground group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors"
@@ -966,7 +978,7 @@ export default function ProblemsPage() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="px-6">
+                          <TableCell className="px-6 max-w-[175px]">
                             <DifficultyBadge difficulty={problem.difficulty} />
                           </TableCell>
                           <TableCell className="px-6">
@@ -978,7 +990,7 @@ export default function ProblemsPage() {
                                     variant="outline"
                                     className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
                                   >
-                                    {pattern.name}
+                                    {clipPattern(pattern.name)}
                                   </Badge>
                                 ))}
                                 {problem.patterns.length > 2 && (
@@ -1043,7 +1055,9 @@ export default function ProblemsPage() {
                           </TableCell>
                           <TableCell className="px-6">
                             <span className="text-sm text-muted-foreground">
-                              {formatDate(problem.lastAttempt)}
+                              {problem.lastAttempt
+                                ? `${formatDate(problem.lastAttempt)}${formatMinutes(problem.submissions[0]?.timeSpentSeconds) ? ` • ${formatMinutes(problem.submissions[0]?.timeSpentSeconds)}` : ""}`
+                                : "Never"}
                             </span>
                           </TableCell>
                           <TableCell className="text-right px-6">

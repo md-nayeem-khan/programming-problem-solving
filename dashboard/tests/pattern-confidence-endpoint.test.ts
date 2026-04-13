@@ -20,8 +20,8 @@ test("confidence endpoint returns stable response shape with solvedProblemIds", 
           submittedAt: new Date("2026-04-01T10:00:00.000Z"),
         },
         {
-          status: "solved",
-          timeSpentSeconds: 900,
+          status: "failed",
+          timeSpentSeconds: 1400,
           wasHintUsed: false,
           submittedAt: new Date("2026-04-02T10:00:00.000Z"),
         },
@@ -47,7 +47,7 @@ test("confidence endpoint returns stable response shape with solvedProblemIds", 
       patterns: [{ pattern: { id: 102, name: "Hashing", category: "Array" } }],
       submissions: [
         {
-          status: "failed",
+          status: "partial",
           timeSpentSeconds: 2000,
           wasHintUsed: false,
           submittedAt: new Date("2026-04-04T10:00:00.000Z"),
@@ -87,7 +87,7 @@ test("confidence endpoint returns stable response shape with solvedProblemIds", 
     assert.ok(Array.isArray(firstPattern.solvedProblemIds));
 
     assert.equal(body.patterns.length, 2);
-    assert.deepEqual(body.patterns[0].solvedProblemIds.sort((a: number, b: number) => a - b), [1, 2]);
+    assert.deepEqual(body.patterns[0].solvedProblemIds, [2]);
     assert.deepEqual(body.patterns[1].solvedProblemIds, [2]);
 
     assert.equal(typeof body.summary.totalPatterns, "number");

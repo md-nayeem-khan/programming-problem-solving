@@ -41,8 +41,6 @@ export function AnimatedCounter({
     return formatNumber(Math.round(latest * Math.pow(10, decimal)) / Math.pow(10, decimal));
   });
 
-  const [hasAnimated, setHasAnimated] = React.useState(false);
-
   function formatNumber(num: number): string {
     if (separator && num >= 1000) {
       return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, separator);
@@ -51,18 +49,14 @@ export function AnimatedCounter({
   }
 
   React.useEffect(() => {
-    if (!hasAnimated) {
-      const controls = animate(count, value, {
-        duration,
-        delay,
-        ease: [0.25, 0.46, 0.45, 0.94],
-      });
+    const controls = animate(count, value, {
+      duration,
+      delay,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    });
 
-      setHasAnimated(true);
-
-      return controls.stop;
-    }
-  }, [count, value, duration, delay, hasAnimated]);
+    return controls.stop;
+  }, [count, value, duration, delay]);
 
   return (
     <motion.span

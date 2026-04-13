@@ -17,6 +17,12 @@ interface ReadinessData {
   tips: string[];
 }
 
+const STATUS_MIN_PERCENTAGE: Record<ReadinessData["status"], number> = {
+  "Ready": 80,
+  "Almost Ready": 60,
+  "Not Ready": 0,
+};
+
 export function ReadinessCard() {
   const [data, setData] = useState<ReadinessData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,11 +34,20 @@ export function ReadinessCard() {
         const response = await fetch("/api/analytics/readiness");
         if (!response.ok) throw new Error("Failed to fetch readiness data");
         const result = await response.json();
+        const status = result.readinessScore.level as ReadinessData["status"];
+        const rawScore = Number(result.readinessScore.score);
+        const hasValidScore = Number.isFinite(rawScore);
+        const normalizedScore = hasValidScore
+          ? rawScore
+          : STATUS_MIN_PERCENTAGE[status] / 100;
+        const correctedScore = Math.max(
+          normalizedScore,
+          STATUS_MIN_PERCENTAGE[status] / 100
+        );
         
         setData({
-          score: result.readinessScore.score,
-          status: result.readinessScore.score >= 0.8 ? "Ready" : 
-                  result.readinessScore.score >= 0.6 ? "Almost Ready" : "Not Ready",
+          score: correctedScore,
+          status,
           tips: result.recommendations || [],
         });
       } catch (err) {
@@ -102,11 +117,11 @@ export function ReadinessCard() {
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
-      className="group"
+      className="group h-full"
     >
       <GlassCard 
         variant="default" 
-        className="dashboard-card dashboard-card-violet dashboard-soft-grid group min-h-[400px] border-fuchsia-200/60 shadow-xl shadow-fuchsia-500/20 transition-all duration-300"
+        className="dashboard-card dashboard-card-violet dashboard-soft-grid group h-full min-h-[400px] flex flex-col [&>div]:h-full [&>div]:flex [&>div]:flex-col border-fuchsia-200/60 shadow-xl shadow-fuchsia-500/20 transition-all duration-300"
         hover={true}
       >
         <div className="pointer-events-none absolute -top-10 -right-8 h-24 w-24 rounded-full bg-fuchsia-400/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -129,7 +144,7 @@ export function ReadinessCard() {
           </CardTitle>
         </CardHeader>
         
-        <CardContent className="space-y-8">
+        <CardContent className="space-y-8 flex-1 flex flex-col justify-center">
           {/* Main Score Display */}
           <div className="flex flex-col items-center justify-center">
             <motion.div

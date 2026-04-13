@@ -7,6 +7,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Building2, AlertCircle } from "lucide-react";
 import { fadeInUp, staggerContainer, staggerItem } from "@/lib/animations";
+import {
+  READINESS_ALMOST_READY_THRESHOLD,
+  READINESS_READY_THRESHOLD,
+} from "@/types";
 
 interface CompanyReadiness {
   company: string;
@@ -39,12 +43,18 @@ export function CompanyReadinessCard() {
         
         const companyData = data.companies?.map((c: any) => {
           const readinessValue = c.readinessScore ?? 0;
+          const readinessLevel = c.readinessLevel ||
+            (readinessValue >= READINESS_READY_THRESHOLD
+              ? "Ready"
+              : readinessValue >= READINESS_ALMOST_READY_THRESHOLD
+                ? "Almost Ready"
+                : "Not Ready");
+
           return {
             company: c.company,
             percentage: Math.round(readinessValue * 100),
             problemsSolved: c.problemsSolved || 0,
-            readiness: readinessValue >= 0.75 ? "Ready" : 
-                       readinessValue >= 0.5 ? "Almost Ready" : "Not Ready",
+            readiness: readinessLevel,
           };
         }) || [];
         
