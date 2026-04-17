@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "tsx --test tests/**/*.test.ts",
+    "db:generate:sqlite": "prisma generate --schema prisma/schema.sqlite.prisma",
+    "db:migrate:sqlite-to-postgres": "tsx scripts/migrate-sqlite-to-postgres.ts",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force"
   },

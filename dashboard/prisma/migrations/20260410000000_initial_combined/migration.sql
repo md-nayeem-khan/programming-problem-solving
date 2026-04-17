@@ -1,20 +1,20 @@
 -- CreateTable
 CREATE TABLE "problems" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "platform" TEXT NOT NULL,
     "problemId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "difficulty" TEXT NOT NULL,
     "url" TEXT,
     "notes" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "source" TEXT NOT NULL DEFAULT 'NeetCode'
 );
 
 -- CreateTable
 CREATE TABLE "problem_tags" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "problemId" INTEGER NOT NULL,
     "tag" TEXT NOT NULL,
     CONSTRAINT "problem_tags_problemId_fkey" FOREIGN KEY ("problemId") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE
@@ -22,7 +22,7 @@ CREATE TABLE "problem_tags" (
 
 -- CreateTable
 CREATE TABLE "patterns" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "category" TEXT NOT NULL,
     "description" TEXT
@@ -30,17 +30,17 @@ CREATE TABLE "patterns" (
 
 -- CreateTable
 CREATE TABLE "company_cards" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "icon" TEXT NOT NULL DEFAULT '🏢',
     "targetProblems" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "problem_patterns" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "problemId" INTEGER NOT NULL,
     "patternId" INTEGER NOT NULL,
     CONSTRAINT "problem_patterns_problemId_fkey" FOREIGN KEY ("problemId") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -49,7 +49,7 @@ CREATE TABLE "problem_patterns" (
 
 -- CreateTable
 CREATE TABLE "problem_companies" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "problemId" INTEGER NOT NULL,
     "companyId" INTEGER NOT NULL,
     CONSTRAINT "problem_companies_problemId_fkey" FOREIGN KEY ("problemId") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -58,14 +58,14 @@ CREATE TABLE "problem_companies" (
 
 -- CreateTable
 CREATE TABLE "submissions" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "problemId" INTEGER NOT NULL,
     "attemptNumber" INTEGER NOT NULL,
     "time_spent_seconds" INTEGER NOT NULL,
     "status" TEXT NOT NULL,
     "notes" TEXT,
-    "submitted_at" DATETIME NOT NULL,
-    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "submitted_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "attemptType" TEXT NOT NULL DEFAULT 'First',
     "was_hint_used" BOOLEAN NOT NULL DEFAULT false,
     "mistake_note" TEXT,
@@ -76,10 +76,10 @@ CREATE TABLE "submissions" (
 
 -- CreateTable
 CREATE TABLE "sessions" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "problemId" INTEGER NOT NULL,
-    "startedAt" DATETIME NOT NULL,
-    "endedAt" DATETIME,
+    "startedAt" TIMESTAMP(3) NOT NULL,
+    "endedAt" TIMESTAMP(3),
     "durationSeconds" INTEGER,
     "notes" TEXT,
     CONSTRAINT "sessions_problemId_fkey" FOREIGN KEY ("problemId") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE
@@ -87,12 +87,12 @@ CREATE TABLE "sessions" (
 
 -- CreateTable
 CREATE TABLE "revisions" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "submissionId" INTEGER NOT NULL,
     "intervalLevel" INTEGER NOT NULL DEFAULT 0,
-    "nextReviewDate" DATETIME NOT NULL,
+    "nextReviewDate" TIMESTAMP(3) NOT NULL,
     "completed" BOOLEAN NOT NULL DEFAULT false,
-    "completedAt" DATETIME,
+    "completedAt" TIMESTAMP(3),
     "wasSuccessful" BOOLEAN,
     "timeSpentSeconds" INTEGER,
     "solvedWithoutHint" BOOLEAN,
@@ -105,67 +105,67 @@ CREATE TABLE "revisions" (
 
 -- CreateTable
 CREATE TABLE "mock_interviews" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "problem_id" INTEGER NOT NULL,
-    "date" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "time_limit" INTEGER NOT NULL DEFAULT 2700,
     "time_taken_seconds" INTEGER,
     "pattern_recognition_seconds" INTEGER,
     "solved" BOOLEAN NOT NULL DEFAULT false,
     "explanation_score" INTEGER,
     "code_quality_score" INTEGER,
-    "overall_score" REAL,
+    "overall_score" DOUBLE PRECISION,
     "notes" TEXT,
     CONSTRAINT "mock_interviews_problem_id_fkey" FOREIGN KEY ("problem_id") REFERENCES "problems" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "daily_progress" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "date" DATETIME NOT NULL,
+    "id" SERIAL PRIMARY KEY,
+    "date" TIMESTAMP(3) NOT NULL,
     "problemsSolved" INTEGER NOT NULL DEFAULT 0,
     "totalTimeSpent" INTEGER NOT NULL DEFAULT 0,
     "patternsWorked" INTEGER NOT NULL DEFAULT 0,
     "mockInterviews" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "goals" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "title" TEXT NOT NULL,
     "description" TEXT,
     "type" TEXT NOT NULL,
     "targetValue" INTEGER NOT NULL,
     "currentValue" INTEGER NOT NULL DEFAULT 0,
     "unit" TEXT NOT NULL DEFAULT 'problems',
-    "startDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deadline" DATETIME NOT NULL,
+    "startDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deadline" TIMESTAMP(3) NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'active',
     "priority" TEXT NOT NULL DEFAULT 'medium',
     "targetPattern" TEXT,
     "targetCompany" TEXT,
     "targetDifficulty" TEXT,
-    "completedAt" DATETIME,
-    "lastProgressUpdate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "completedAt" TIMESTAMP(3),
+    "lastProgressUpdate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "milestones" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "goalId" INTEGER NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
     "targetValue" INTEGER NOT NULL,
-    "dueDate" DATETIME NOT NULL,
+    "dueDate" TIMESTAMP(3) NOT NULL,
     "completed" BOOLEAN NOT NULL DEFAULT false,
-    "completedDate" DATETIME,
+    "completedDate" TIMESTAMP(3),
     "completionNote" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "milestones_goalId_fkey" FOREIGN KEY ("goalId") REFERENCES "goals" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
