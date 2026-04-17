@@ -651,12 +651,18 @@ function assertKnownPatterns(patternNames: string[], context: string) {
 async function seedPatterns() {
   for (const pattern of PATTERNS) {
     await prisma.pattern.upsert({
-      where: { name: pattern.name },
+      where: {
+        userId_name: {
+          userId: null,
+          name: pattern.name,
+        },
+      },
       update: {
         category: pattern.category,
         description: pattern.description ?? null,
       },
       create: {
+        userId: null,
         name: pattern.name,
         category: pattern.category,
         description: pattern.description ?? null,
@@ -668,9 +674,15 @@ async function seedPatterns() {
 async function seedCompanies() {
   for (const company of COMPANY_SEED) {
     await prisma.companyCard.upsert({
-      where: { name: company.name },
+      where: {
+        userId_name: {
+          userId: null,
+          name: company.name,
+        },
+      },
       update: {},
       create: {
+        userId: null,
         name: company.name,
       },
     })
@@ -686,7 +698,8 @@ async function seedProblems() {
 
     const createdProblem = await prisma.problem.upsert({
       where: {
-        platform_problemId: {
+        userId_platform_problemId: {
+          userId: null,
           platform: problem.platform,
           problemId: problem.problemId,
         },
@@ -697,6 +710,7 @@ async function seedProblems() {
         url: problem.url,
       },
       create: {
+        userId: null,
         platform: problem.platform,
         problemId: problem.problemId,
         title: problem.title,

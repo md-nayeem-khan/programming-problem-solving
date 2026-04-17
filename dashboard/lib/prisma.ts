@@ -76,7 +76,7 @@ export const prisma = basePrisma.$extends({
           return query(args);
         }
 
-        const delegate = (basePrisma as Record<string, unknown>)[modelDelegateName(model)] as Record<string, (input: unknown) => Promise<unknown>>;
+        const delegate = (basePrisma as unknown as Record<string, unknown>)[modelDelegateName(model)] as Record<string, (input: unknown) => Promise<unknown>>;
         const mutableArgs = (args ?? {}) as Record<string, unknown>;
 
         if (operation === 'create') {

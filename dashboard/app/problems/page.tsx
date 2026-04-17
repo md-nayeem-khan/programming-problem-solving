@@ -396,15 +396,16 @@ export default function ProblemsPage() {
       const value = (customEvent.detail || "").trim();
       setFilters((prev) => ({ ...prev, search: value }));
     };
+    const onPopState = () => applySearchFromUrl();
 
     applySearchFromUrl(true);
     hasHydratedFilters.current = true;
     window.addEventListener("headerSearch", onHeaderSearch as EventListener);
-    window.addEventListener("popstate", applySearchFromUrl);
+    window.addEventListener("popstate", onPopState);
 
     return () => {
       window.removeEventListener("headerSearch", onHeaderSearch as EventListener);
-      window.removeEventListener("popstate", applySearchFromUrl);
+      window.removeEventListener("popstate", onPopState);
     };
   }, []);
 
