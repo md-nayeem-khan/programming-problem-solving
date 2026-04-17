@@ -8,6 +8,9 @@ import {
   type CompanyReadiness,
 } from '@/types'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 function normalizeCompanyName(value: string | null | undefined): string | null {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
