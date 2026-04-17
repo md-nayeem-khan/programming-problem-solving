@@ -27,6 +27,11 @@ interface QuickSearchResult {
   patterns: { id: number; name: string; category: string }[];
 }
 
+interface AuthUserProfile {
+  id: string;
+  email: string;
+}
+
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
@@ -37,6 +42,8 @@ export function Navbar() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [quickResults, setQuickResults] = useState<QuickSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [authUser, setAuthUser] = useState<AuthUserProfile | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,6 +51,49 @@ export function Navbar() {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchAuthUser() {
+      try {
+        const response = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          if (isMounted) {
+            setAuthUser(null);
+          }
+          return;
+        }
+
+        const payload = await response.json();
+        const data = payload?.data;
+
+        if (
+          isMounted &&
+          data &&
+          typeof data.id === "string" &&
+          typeof data.email === "string"
+        ) {
+          setAuthUser({ id: data.id, email: data.email });
+        }
+      } catch {
+        if (isMounted) {
+          setAuthUser(null);
+        }
+      }
+    }
+
+    fetchAuthUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -137,6 +187,26 @@ export function Navbar() {
   const handleResultClick = (problemId: number) => {
     setSearchFocused(false);
     router.push(`/problems/${problemId}`);
+  };
+
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    try {
+      setIsLoggingOut(true);
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      router.replace("/login");
+      router.refresh();
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -279,8 +349,8 @@ export function Navbar() {
             <DropdownMenuContent align="end" className="w-56 bg-white/90 backdrop-blur-md border-white/20">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">User</p>
-                  <p className="text-xs text-muted-foreground">user@company.com</p>
+                  <p className="text-sm font-medium">{authUser ? `ID: ${authUser.id}` : "ID: -"}</p>
+                  <p className="text-xs text-muted-foreground">{authUser?.email ?? "-"}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -302,9 +372,20 @@ export function Navbar() {
               <DropdownMenuSeparator />
               
               <motion.div whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
-                <DropdownMenuItem className="text-red-600 cursor-pointer hover:bg-red-50">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
+                <DropdownMenuItem
+                  className="text-red-600 cursor-pointer hover:bg-red-50"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    void handleLogout();
+                  }}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogOut className="mr-2 h-4 w-4" />
+                  )}
+                  {isLoggingOut ? "Logging out..." : "Log out"}
                 </DropdownMenuItem>
               </motion.div>
             </DropdownMenuContent>

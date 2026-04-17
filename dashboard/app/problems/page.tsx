@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Filter,
@@ -108,6 +108,52 @@ interface FilterOptions {
 // Constants
 const ITEMS_PER_PAGE = 700;
 const TITLE_CLIP_LENGTH = 50;
+const PROBLEMS_FILTERS_STORAGE_KEY = "algometrics.problems.filters";
+const DEFAULT_FILTERS: Filters = {
+  search: "",
+  difficulty: "",
+  pattern: "",
+  tag: "",
+  companyId: "",
+  status: "",
+};
+
+const sanitizeFilterValue = (value: unknown) =>
+  typeof value === "string" ? value.trim() : "";
+
+const parseFiltersFromUrl = (): Filters => {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    search: sanitizeFilterValue(params.get("search")),
+    difficulty: sanitizeFilterValue(params.get("difficulty")),
+    pattern: sanitizeFilterValue(params.get("pattern")),
+    tag: sanitizeFilterValue(params.get("tag")),
+    companyId: sanitizeFilterValue(params.get("companyId")),
+    status: sanitizeFilterValue(params.get("status")),
+  };
+};
+
+const parseFiltersFromStorage = (): Filters | null => {
+  try {
+    const raw = window.localStorage.getItem(PROBLEMS_FILTERS_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<Filters>;
+    return {
+      search: sanitizeFilterValue(parsed.search),
+      difficulty: sanitizeFilterValue(parsed.difficulty),
+      pattern: sanitizeFilterValue(parsed.pattern),
+      tag: sanitizeFilterValue(parsed.tag),
+      companyId: sanitizeFilterValue(parsed.companyId),
+      status: sanitizeFilterValue(parsed.status),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const hasAnyActiveFilters = (value: Filters) =>
+  Object.values(value).some((fieldValue) => fieldValue !== "");
 
 // Animation Variants
 const tableRowVariants = {
@@ -319,44 +365,29 @@ export default function ProblemsPage() {
   const [deletingProblem, setDeletingProblem] = useState<Problem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<Filters>({
-    search: "",
-    difficulty: "",
-    pattern: "",
-    tag: "",
-    companyId: "",
-    status: "",
-  });
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const hasHydratedFilters = useRef(false);
 
   useEffect(() => {
-    const applySearchFromUrl = () => {
-      const params = new URLSearchParams(window.location.search);
-      const search = (params.get("search") || "").trim();
-      const difficulty = (params.get("difficulty") || "").trim();
-      const pattern = (params.get("pattern") || "").trim();
-      const tag = (params.get("tag") || "").trim();
-      const companyId = (params.get("companyId") || "").trim();
-      const status = (params.get("status") || "").trim();
+    const applySearchFromUrl = (fallbackToStorage = false) => {
+      const filtersFromUrl = parseFiltersFromUrl();
+      const nextFilters =
+        hasAnyActiveFilters(filtersFromUrl) || !fallbackToStorage
+          ? filtersFromUrl
+          : parseFiltersFromStorage() || DEFAULT_FILTERS;
+
       setFilters((prev) => {
         if (
-          prev.search === search &&
-          prev.difficulty === difficulty &&
-          prev.pattern === pattern &&
-          prev.tag === tag &&
-          prev.companyId === companyId &&
-          prev.status === status
+          prev.search === nextFilters.search &&
+          prev.difficulty === nextFilters.difficulty &&
+          prev.pattern === nextFilters.pattern &&
+          prev.tag === nextFilters.tag &&
+          prev.companyId === nextFilters.companyId &&
+          prev.status === nextFilters.status
         ) {
           return prev;
         }
-        return {
-          ...prev,
-          search,
-          difficulty,
-          pattern,
-          tag,
-          companyId,
-          status,
-        };
+        return nextFilters;
       });
     };
 
@@ -366,7 +397,8 @@ export default function ProblemsPage() {
       setFilters((prev) => ({ ...prev, search: value }));
     };
 
-    applySearchFromUrl();
+    applySearchFromUrl(true);
+    hasHydratedFilters.current = true;
     window.addEventListener("headerSearch", onHeaderSearch as EventListener);
     window.addEventListener("popstate", applySearchFromUrl);
 
@@ -375,6 +407,23 @@ export default function ProblemsPage() {
       window.removeEventListener("popstate", applySearchFromUrl);
     };
   }, []);
+
+  useEffect(() => {
+    if (!hasHydratedFilters.current) {
+      return;
+    }
+
+    try {
+      if (!hasAnyActiveFilters(filters)) {
+        window.localStorage.removeItem(PROBLEMS_FILTERS_STORAGE_KEY);
+        return;
+      }
+
+      window.localStorage.setItem(PROBLEMS_FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    } catch {
+      // Ignore storage errors (e.g. private mode restrictions).
+    }
+  }, [filters]);
 
   const fetchFilterOptions = useCallback(async () => {
     try {
@@ -543,18 +592,16 @@ export default function ProblemsPage() {
 
   // Clear all filters
   const clearFilters = () => {
-    setFilters({
-      search: "",
-      difficulty: "",
-      pattern: "",
-      tag: "",
-      companyId: "",
-      status: "",
-    });
+    setFilters(DEFAULT_FILTERS);
+    try {
+      window.localStorage.removeItem(PROBLEMS_FILTERS_STORAGE_KEY);
+    } catch {
+      // Ignore storage errors (e.g. private mode restrictions).
+    }
     router.replace("/problems");
   };
 
-  const hasActiveFilters = Object.values(filters).some((v) => v !== "");
+  const hasActiveFilters = hasAnyActiveFilters(filters);
 
   // Format date helper
   const formatDate = (dateString: string | null) => {

@@ -42,9 +42,13 @@ AlgoMetrics - Interview Preparation Analytics Dashboard for competitive programm
 
 ```bash
 npm install
+cp .env.example .env
+# set AUTH_SECRET and database credentials in .env
 npx prisma migrate dev  # Setup database
 npm run dev
 ```
+
+For an auth secret, use any securely generated string with 32+ characters.
 
 Open [http://localhost:3000](http://localhost:3000)
 
