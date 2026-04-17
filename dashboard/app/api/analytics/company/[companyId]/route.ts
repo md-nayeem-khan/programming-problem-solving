@@ -6,6 +6,9 @@ import {
   getLatestSubmission,
 } from '@/lib/analytics/company-metrics'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET /api/analytics/company/[companyId] - Get analytics for a specific company by id
 export async function GET(
   request: NextRequest,
