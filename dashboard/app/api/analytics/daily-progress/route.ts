@@ -1,8 +1,16 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { calculateDailyProgressSnapshot } from '@/lib/analytics/daily-progress-metrics'
 import { calculateCurrentStreakFromSolvedDays, calculateLongestStreakFromSolvedDays, toDateKey } from '@/lib/analytics/streak-metrics'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const runtime = 'nodejs'
+
+async function getPrismaClient() {
+  const { prisma } = await import('@/lib/prisma')
+  return prisma
+}
 
 // Helper function to normalize date to start of day (UTC)
 function normalizeDate(date: Date): Date {
@@ -39,6 +47,7 @@ function calculateStreaks(dailyProgress: Array<{ date: Date; problemsSolved: num
 // GET /api/analytics/daily-progress - Get daily progress data with streaks
 export async function GET(request: NextRequest) {
   try {
+    const prisma = await getPrismaClient()
     const searchParams = request.nextUrl.searchParams
     const days = parseInt(searchParams.get('days') || '30')
     const includeStreak = searchParams.get('streak') !== 'false'
@@ -238,6 +247,7 @@ export async function GET(request: NextRequest) {
 // POST /api/analytics/daily-progress - Update daily progress (usually called by other APIs)
 export async function POST(request: NextRequest) {
   try {
+    const prisma = await getPrismaClient()
     const body = await request.json()
     const { 
       date = new Date(),
@@ -283,6 +293,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/analytics/daily-progress - Recalculate daily progress from submissions
 export async function PUT(request: NextRequest) {
   try {
+    const prisma = await getPrismaClient()
     const searchParams = request.nextUrl.searchParams
     const days = parseInt(searchParams.get('days') || '30')
     const force = searchParams.get('force') === 'true'
