@@ -3,6 +3,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calculateDailyProgressSnapshot } from '@/lib/analytics/daily-progress-metrics'
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000
+
+function startOfUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+}
+
+function addUtcDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * DAY_IN_MS)
+}
+
 const REVISION_INTERVALS = [1, 3, 7, 14]
 
 export async function GET(request: NextRequest) {
@@ -141,26 +151,15 @@ export async function POST(request: NextRequest) {
 
     // Update daily progress automatically
     try {
-      const submissionDate = submission.submittedAt
-      const normalizedDate = new Date(submissionDate)
-      normalizedDate.setUTCHours(0, 0, 0, 0)
-
-      // Get patterns for this problem to count unique patterns worked on today
-      const problemWithPatterns = await prisma.problem.findUnique({
-        where: { id: problemId },
-        include: {
-          patterns: {
-            include: { pattern: true }
-          }
-        }
-      })
+      const normalizedDate = startOfUtcDay(new Date(submission.submittedAt))
+      const endOfDayExclusive = addUtcDays(normalizedDate, 1)
 
       // Get all submissions for today to calculate patterns worked
       const todaySubmissions = await prisma.submission.findMany({
         where: {
           submittedAt: {
             gte: normalizedDate,
-            lt: new Date(normalizedDate.getTime() + 24 * 60 * 60 * 1000)
+            lt: endOfDayExclusive
           }
         },
         include: {
@@ -175,21 +174,35 @@ export async function POST(request: NextRequest) {
       const dailySnapshot = calculateDailyProgressSnapshot(todaySubmissions)
 
       // Update daily progress
-      await prisma.dailyProgress.upsert({
-        where: { date: normalizedDate },
-        update: {
-          problemsSolved: dailySnapshot.problemsSolved,
-          totalTimeSpent: dailySnapshot.totalTimeSpent,
-          patternsWorked: dailySnapshot.patternsWorked,
+      const existingDailyProgress = await prisma.dailyProgress.findFirst({
+        where: {
+          date: {
+            gte: normalizedDate,
+            lt: endOfDayExclusive,
+          },
         },
-        create: {
-          date: normalizedDate,
-          problemsSolved: dailySnapshot.problemsSolved,
-          totalTimeSpent: dailySnapshot.totalTimeSpent,
-          patternsWorked: dailySnapshot.patternsWorked,
-          mockInterviews: 0
-        }
       })
+
+      if (existingDailyProgress) {
+        await prisma.dailyProgress.update({
+          where: { id: existingDailyProgress.id },
+          data: {
+            problemsSolved: dailySnapshot.problemsSolved,
+            totalTimeSpent: dailySnapshot.totalTimeSpent,
+            patternsWorked: dailySnapshot.patternsWorked,
+          },
+        })
+      } else {
+        await prisma.dailyProgress.create({
+          data: {
+            date: normalizedDate,
+            problemsSolved: dailySnapshot.problemsSolved,
+            totalTimeSpent: dailySnapshot.totalTimeSpent,
+            patternsWorked: dailySnapshot.patternsWorked,
+            mockInterviews: 0,
+          },
+        })
+      }
     } catch (progressError) {
       console.error('Error updating daily progress:', progressError)
       // Don't fail the submission if daily progress update fails

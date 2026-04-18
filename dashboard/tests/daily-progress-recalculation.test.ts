@@ -6,9 +6,12 @@ import { prisma } from "../lib/prisma";
 
 test("daily progress recalculation deduplicates solved problems by problemId", async () => {
   const originalSubmissionFindMany = (prisma.submission as any).findMany;
-  const originalDailyProgressUpsert = (prisma.dailyProgress as any).upsert;
+  const originalDailyProgressFindFirst = (prisma.dailyProgress as any).findFirst;
+  const originalDailyProgressCreate = (prisma.dailyProgress as any).create;
+  const originalDailyProgressUpdate = (prisma.dailyProgress as any).update;
 
-  const upsertCalls: any[] = [];
+  const createCalls: any[] = [];
+  const updateCalls: any[] = [];
 
   (prisma.submission as any).findMany = async () => [
     {
@@ -40,9 +43,14 @@ test("daily progress recalculation deduplicates solved problems by problemId", a
     },
   ];
 
-  (prisma.dailyProgress as any).upsert = async (args: any) => {
-    upsertCalls.push(args);
-    return { id: 1, ...args.create };
+  (prisma.dailyProgress as any).findFirst = async () => null;
+  (prisma.dailyProgress as any).create = async (args: any) => {
+    createCalls.push(args);
+    return { id: 1, ...args.data };
+  };
+  (prisma.dailyProgress as any).update = async (args: any) => {
+    updateCalls.push(args);
+    return { id: args.where.id, ...args.data };
   };
 
   try {
@@ -55,14 +63,17 @@ test("daily progress recalculation deduplicates solved problems by problemId", a
 
     assert.equal(response.status, 200);
     assert.equal(body.updatedDays, 1);
-    assert.equal(upsertCalls.length, 1);
+    assert.equal(createCalls.length, 1);
+    assert.equal(updateCalls.length, 0);
 
-    const first = upsertCalls[0];
-    assert.equal(first.update.problemsSolved, 1);
-    assert.equal(first.update.totalTimeSpent, 2500);
-    assert.equal(first.update.patternsWorked, 2);
+    const first = createCalls[0];
+    assert.equal(first.data.problemsSolved, 1);
+    assert.equal(first.data.totalTimeSpent, 2500);
+    assert.equal(first.data.patternsWorked, 2);
   } finally {
     (prisma.submission as any).findMany = originalSubmissionFindMany;
-    (prisma.dailyProgress as any).upsert = originalDailyProgressUpsert;
+    (prisma.dailyProgress as any).findFirst = originalDailyProgressFindFirst;
+    (prisma.dailyProgress as any).create = originalDailyProgressCreate;
+    (prisma.dailyProgress as any).update = originalDailyProgressUpdate;
   }
 });
